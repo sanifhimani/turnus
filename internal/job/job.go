@@ -97,6 +97,14 @@ type Job struct {
 	Line    int    `json:"line,omitempty"`
 	LogPath string `json:"log,omitempty"`
 
+	// Unit is the systemd service a timer starts. Its output is in the
+	// journal under this name.
+	Unit string `json:"unit,omitempty"`
+
+	// Persistent is set for systemd timers that run missed jobs after the
+	// machine was off.
+	Persistent bool `json:"-"`
+
 	// Err is set when the job's definition could not be read.
 	Err string `json:"error,omitempty"`
 
