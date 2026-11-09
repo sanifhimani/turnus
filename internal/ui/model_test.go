@@ -189,6 +189,23 @@ func TestSelectionStaysVisible(t *testing.T) {
 	}
 }
 
+func TestStatus(t *testing.T) {
+	segv, fail := -11, 3
+	tests := []struct {
+		j    job.Job
+		want string
+	}{
+		{job.Job{Kind: job.Scheduled, State: job.StateIdle, LastExit: &segv}, "waiting · last run killed (segmentation fault)"},
+		{job.Job{Kind: job.Service, State: job.StateIdle, LastExit: &fail}, "stopped · last exit 3"},
+		{job.Job{Kind: job.Service, State: job.StateRunning, PID: 42}, "running · pid 42"},
+	}
+	for _, tt := range tests {
+		if got := status(&tt.j); got != tt.want {
+			t.Errorf("status = %q, want %q", got, tt.want)
+		}
+	}
+}
+
 func TestWhen(t *testing.T) {
 	now := time.Date(2026, 11, 8, 21, 0, 0, 0, time.Local) // a Sunday
 	tests := []struct {
