@@ -1,0 +1,274 @@
+Unit=lab-crash.service
+TimersCalendar={ OnCalendar=*-*-* *:00:00 ; next_elapse=Mon 2026-11-09 04:00:00 UTC }
+NextElapseUSecRealtime=Mon 2026-11-09 04:00:00 UTC
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-crash.timer
+Description=turnus lab: crash timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-crash.timer
+UnitFileState=enabled
+
+Unit=lab-disabled.service
+TimersCalendar={ OnCalendar=Mon *-*-* 00:00:00 ; next_elapse=(null) }
+NextElapseUSecRealtime=
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-disabled.timer
+Description=turnus lab: disabled timer
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-disabled.timer
+UnitFileState=disabled
+
+Unit=lab-fail.service
+TimersCalendar={ OnCalendar=*-*-* *:02/10:00 ; next_elapse=Mon 2026-11-09 03:42:00 UTC }
+NextElapseUSecRealtime=Mon 2026-11-09 03:42:00 UTC
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-fail.timer
+Description=turnus lab: fail timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-fail.timer
+UnitFileState=enabled
+
+Unit=lab-interval.service
+TimersMonotonic={ OnBootUSec=15min ; next_elapse=1d 14h 59min 50.425925s }
+TimersMonotonic={ OnUnitActiveUSec=1h ; next_elapse=0 }
+NextElapseUSecRealtime=
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-interval.timer
+Description=turnus lab: interval timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-interval.timer
+UnitFileState=enabled
+
+Unit=lab-missing.service
+TimersCalendar={ OnCalendar=*-*-* 00:00:00 ; next_elapse=Tue 2026-11-10 00:00:00 UTC }
+NextElapseUSecRealtime=Tue 2026-11-10 00:00:00 UTC
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-missing.timer
+Description=turnus lab: missing timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-missing.timer
+UnitFileState=enabled
+
+Unit=lab-never.service
+TimersCalendar={ OnCalendar=*-02-30 00:00:00 ; next_elapse=(null) }
+NextElapseUSecRealtime=
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-never.timer
+Description=turnus lab: never timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-never.timer
+UnitFileState=enabled
+
+Unit=lab-nightly.service
+TimersCalendar={ OnCalendar=*-*-* 02:30:00 ; next_elapse=Tue 2026-11-10 02:30:00 UTC }
+NextElapseUSecRealtime=Tue 2026-11-10 02:30:00 UTC
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-nightly.timer
+Description=turnus lab: nightly timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-nightly.timer
+UnitFileState=enabled
+
+Unit=lab-ok.service
+TimersCalendar={ OnCalendar=*-*-* *:00/5:00 ; next_elapse=Mon 2026-11-09 03:40:00 UTC }
+NextElapseUSecRealtime=Mon 2026-11-09 03:40:00 UTC
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-ok.timer
+Description=turnus lab: ok timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-ok.timer
+UnitFileState=enabled
+
+Unit=lab-orphan.service
+TimersCalendar={ OnCalendar=*-*-* 00:00:00 ; next_elapse=(null) }
+NextElapseUSecRealtime=
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-orphan.timer
+Description=turnus lab: timer whose service is missing
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-orphan.timer
+UnitFileState=enabled
+
+Unit=lab-persist.service
+TimersCalendar={ OnCalendar=Mon..Fri *-*-* 09:00:00 ; next_elapse=Mon 2026-11-09 09:00:00 UTC }
+NextElapseUSecRealtime=Mon 2026-11-09 09:00:00 UTC
+LastTriggerUSec=
+Result=success
+Persistent=yes
+Id=lab-persist.timer
+Description=turnus lab: persist timer
+LoadState=loaded
+ActiveState=active
+FragmentPath=/etc/systemd/system/lab-persist.timer
+UnitFileState=enabled
+
+Unit=lab-stopped.service
+TimersCalendar={ OnCalendar=*-*-01 00:00:00 ; next_elapse=(null) }
+NextElapseUSecRealtime=
+LastTriggerUSec=
+Result=success
+Persistent=no
+Id=lab-stopped.timer
+Description=turnus lab: stopped timer
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-stopped.timer
+UnitFileState=enabled
+
+MainPID=0
+Result=signal
+ExecMainCode=2
+ExecMainStatus=11
+ExecStart={ path=/usr/local/bin/lab-crash ; argv[]=/usr/local/bin/lab-crash ; ignore_errors=no ; start_time=[Mon 2026-11-09 03:39:28 UTC] ; stop_time=[Mon 2026-11-09 03:39:28 UTC] ; pid=557 ; code=killed ; status=11/SEGV }
+Id=lab-crash.service
+Description=turnus lab: crash
+LoadState=loaded
+ActiveState=failed
+FragmentPath=/etc/systemd/system/lab-crash.service
+UnitFileState=static
+
+MainPID=0
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Id=lab-disabled.service
+Description=turnus lab: disabled
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-disabled.service
+UnitFileState=static
+
+MainPID=0
+Result=exit-code
+ExecMainCode=1
+ExecMainStatus=3
+ExecStart={ path=/bin/sh ; argv[]=/bin/sh -c echo failing on purpose >&2; exit 3 ; ignore_errors=no ; start_time=[Mon 2026-11-09 03:39:28 UTC] ; stop_time=[Mon 2026-11-09 03:39:28 UTC] ; pid=554 ; code=exited ; status=3 }
+Id=lab-fail.service
+Description=turnus lab: fail
+LoadState=loaded
+ActiveState=failed
+FragmentPath=/etc/systemd/system/lab-fail.service
+UnitFileState=static
+
+MainPID=0
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Id=lab-interval.service
+Description=turnus lab: interval
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-interval.service
+UnitFileState=static
+
+MainPID=0
+Result=exit-code
+ExecMainCode=1
+ExecMainStatus=203
+ExecStart={ path=/usr/local/bin/turnus-lab-missing ; argv[]=/usr/local/bin/turnus-lab-missing --flag ; ignore_errors=no ; start_time=[Mon 2026-11-09 03:39:28 UTC] ; stop_time=[Mon 2026-11-09 03:39:28 UTC] ; pid=560 ; code=exited ; status=203 }
+Id=lab-missing.service
+Description=turnus lab: missing
+LoadState=loaded
+ActiveState=failed
+FragmentPath=/etc/systemd/system/lab-missing.service
+UnitFileState=static
+
+MainPID=0
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Id=lab-never.service
+Description=turnus lab: never
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-never.service
+UnitFileState=static
+
+MainPID=0
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Id=lab-nightly.service
+Description=turnus lab: nightly
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-nightly.service
+UnitFileState=static
+
+MainPID=0
+Result=success
+ExecMainCode=1
+ExecMainStatus=0
+ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[Mon 2026-11-09 03:39:28 UTC] ; stop_time=[Mon 2026-11-09 03:39:28 UTC] ; pid=563 ; code=exited ; status=0 }
+Id=lab-ok.service
+Description=turnus lab: ok
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-ok.service
+UnitFileState=static
+
+MainPID=0
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+Id=lab-orphan.service
+Description=lab-orphan.service
+LoadState=not-found
+ActiveState=inactive
+FragmentPath=
+UnitFileState=
+
+MainPID=0
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Id=lab-persist.service
+Description=turnus lab: persist
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-persist.service
+UnitFileState=static
+
+MainPID=0
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+Id=lab-stopped.service
+Description=turnus lab: stopped
+LoadState=loaded
+ActiveState=inactive
+FragmentPath=/etc/systemd/system/lab-stopped.service
+UnitFileState=static

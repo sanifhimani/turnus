@@ -1,0 +1,17 @@
+apt-daily-upgrade.timer      loaded active   waiting Daily apt upgrade and clean activities
+apt-daily.timer              loaded active   waiting Daily apt download activities
+dpkg-db-backup.timer         loaded active   waiting Daily dpkg database backup timer
+e2scrub_all.timer            loaded active   waiting Periodic ext4 Online Metadata Check for All Filesystems
+fstrim.timer                 loaded inactive dead    Discard unused filesystem blocks once a week
+lab-crash.timer              loaded active   waiting turnus lab: crash timer
+lab-fail.timer               loaded active   waiting turnus lab: fail timer
+lab-interval.timer           loaded active   waiting turnus lab: interval timer
+lab-missing.timer            loaded active   waiting turnus lab: missing timer
+lab-never.timer              loaded active   elapsed turnus lab: never timer
+lab-nightly.timer            loaded active   waiting turnus lab: nightly timer
+lab-ok.timer                 loaded active   waiting turnus lab: ok timer
+lab-orphan.timer             loaded inactive dead    turnus lab: timer whose service is missing
+lab-persist.timer            loaded active   waiting turnus lab: persist timer
+lab-stopped.timer            loaded inactive dead    turnus lab: stopped timer
+motd-news.timer              loaded active   waiting Message of the Day
+systemd-tmpfiles-clean.timer loaded active   waiting Daily Cleanup of Temporary Directories
