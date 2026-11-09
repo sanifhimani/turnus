@@ -178,7 +178,10 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 		}
 	}
 
-	name, program, interpreted := commandName(e.Command)
+	// cron ends the command at the first unescaped %, so names and log
+	// paths come from the part before it.
+	runs := beforePercent(e.Command)
+	name, program, interpreted := commandName(runs)
 	j := job.Job{
 		ID:       fmt.Sprintf("cron:%s:%d", file, e.Line),
 		Name:     name,
@@ -193,7 +196,7 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 		State:    job.StateIdle,
 		File:     file,
 		Line:     e.Line,
-		LogPath:  logPath(e.Command),
+		LogPath:  logPath(runs),
 
 		Interpreted: interpreted,
 	}

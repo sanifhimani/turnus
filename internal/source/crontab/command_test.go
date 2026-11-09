@@ -65,3 +65,20 @@ func TestShellFields(t *testing.T) {
 		}
 	}
 }
+
+func TestUnescapedPercent(t *testing.T) {
+	tests := []struct {
+		cmd  string
+		want int
+	}{
+		{"tar czf /backup/$(date +%F).tgz /srv", 24},
+		{`tar czf /backup/$(date +\%F).tgz /srv`, -1},
+		{"echo done", -1},
+		{`printf '\\%s' x`, 10},
+	}
+	for _, tt := range tests {
+		if got := UnescapedPercent(tt.cmd); got != tt.want {
+			t.Errorf("UnescapedPercent(%q) = %d, want %d", tt.cmd, got, tt.want)
+		}
+	}
+}

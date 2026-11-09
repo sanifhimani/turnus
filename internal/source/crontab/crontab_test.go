@@ -23,6 +23,17 @@ func TestToJobInvalid(t *testing.T) {
 	}
 }
 
+func TestToJobPercent(t *testing.T) {
+	// cron cuts the command at %, so the shell really writes to /var/log/b-.
+	j := toJob(Entry{Line: 1, Expr: "@daily", Command: "/usr/bin/backup >> /var/log/b-%F.log 2>&1"}, "/etc/crontab", job.System, now)
+	if j.Name != "backup" || j.LogPath != "/var/log/b-" {
+		t.Errorf("name = %q, log = %q", j.Name, j.LogPath)
+	}
+	if j.Command != "/usr/bin/backup >> /var/log/b-%F.log 2>&1" {
+		t.Errorf("the full command should be kept: %q", j.Command)
+	}
+}
+
 func TestUnreadable(t *testing.T) {
 	j := unreadable("/etc/cron.d/secret", &fs.PathError{Op: "open", Path: "/etc/cron.d/secret", Err: fs.ErrPermission})
 	if !j.Unreadable || j.Err != "permission denied" || j.Name != "secret" {

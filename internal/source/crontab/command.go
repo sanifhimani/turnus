@@ -66,6 +66,29 @@ func commandName(cmd string) (name, program string, interpreted bool) {
 	return strings.TrimSpace(cmd), "", false
 }
 
+// beforePercent returns the command up to its first unescaped %. cron turns
+// that % into a newline and feeds the rest to the command as input.
+func beforePercent(cmd string) string {
+	if i := UnescapedPercent(cmd); i >= 0 {
+		return cmd[:i]
+	}
+	return cmd
+}
+
+// UnescapedPercent returns the index of the first % not preceded by a
+// backslash, or -1.
+func UnescapedPercent(cmd string) int {
+	for i := 0; i < len(cmd); i++ {
+		switch cmd[i] {
+		case '\\':
+			i++
+		case '%':
+			return i
+		}
+	}
+	return -1
+}
+
 // segments splits a command line on the shell's list operators.
 func segments(cmd string) []string {
 	return strings.FieldsFunc(strings.NewReplacer("&&", "\x00", "||", "\x00", ";", "\x00").Replace(cmd), func(r rune) bool {
