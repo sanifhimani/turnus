@@ -1,0 +1,72 @@
+version: 2
+
+project_name: turnus
+
+builds:
+  - main: ./cmd/turnus
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+nfpms:
+  - package_name: turnus
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Sanif Himani
+    maintainer: Sanif Himani <sanif@himani.me>
+    homepage: https://github.com/sanifhimani/turnus
+    description: Terminal UI for cron jobs, launchd agents and systemd timers
+    license: MIT
+    bindir: /usr/bin
+    formats:
+      - deb
+      - rpm
+      - apk
+
+homebrew_casks:
+  - name: turnus
+    binaries:
+      - turnus
+    homepage: https://github.com/sanifhimani/turnus
+    description: Terminal UI for cron jobs, launchd agents and systemd timers
+    repository:
+      owner: sanifhimani
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    hooks:
+      post:
+        # The binary isn't notarized, so clear the quarantine flag macOS sets
+        # on downloads. Without this, macOS refuses to run it.
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/turnus"]
+          end
+
+changelog:
+  use: github
+  filters:
+    exclude:
+      - "^test:"
+      - "^docs:"
+      - "^chore:"
+      - "^refactor:"
