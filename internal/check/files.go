@@ -2,6 +2,7 @@ package check
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,18 @@ import (
 func invalidDefinition(j *job.Job, env Env) *job.Problem {
 	if j.Err == "" {
 		return nil
+	}
+	if j.Source == job.Cron {
+		fix := fmt.Sprintf("Fix line %d in %s", j.Line, env.tilde(j.File))
+		if j.Scope == job.User {
+			fix = fmt.Sprintf("Fix line %d with crontab -e", j.Line)
+		}
+		return &job.Problem{
+			Code:     "invalid-line",
+			Severity: job.Fail,
+			Summary:  "cron can't run this line because " + j.Err,
+			Fix:      fix,
+		}
 	}
 	if j.Source == job.Systemd {
 		return &job.Problem{

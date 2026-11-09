@@ -14,7 +14,7 @@ var protectedFolders = []string{
 }
 
 func protectedFolder(j *job.Job, env Env) *job.Problem {
-	if env.GOOS != "darwin" || j.Source != job.Cron || env.Home == "" {
+	if env.GOOS != "darwin" || j.Source != job.Cron || j.Err != "" || env.Home == "" {
 		return nil
 	}
 	cmd := strings.ReplaceAll(j.Command, "$HOME", env.Home)
@@ -35,7 +35,7 @@ func protectedFolder(j *job.Job, env Env) *job.Problem {
 // output reports cron jobs whose output, including error messages, ends up
 // somewhere nobody looks.
 func output(j *job.Job, env Env) *job.Problem {
-	if j.Source != job.Cron || j.LogPath != "" {
+	if j.Source != job.Cron || j.Err != "" || j.LogPath != "" {
 		return nil
 	}
 	// Scripts in /etc/cron.daily and friends inherit the output handling of

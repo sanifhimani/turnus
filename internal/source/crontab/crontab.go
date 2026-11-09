@@ -135,6 +135,22 @@ func discoverPeriodic(dir, expr, sched string, now time.Time) []job.Job {
 }
 
 func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
+	if e.Err != "" {
+		return job.Job{
+			ID:       fmt.Sprintf("cron:%s:%d", file, e.Line),
+			Name:     fmt.Sprintf("line %d", e.Line),
+			Source:   job.Cron,
+			Scope:    scope,
+			Kind:     job.Scheduled,
+			Command:  e.Command,
+			Schedule: "invalid",
+			State:    job.StateUnknown,
+			File:     file,
+			Line:     e.Line,
+			Err:      e.Err,
+		}
+	}
+
 	name, program, interpreted := commandName(e.Command)
 	j := job.Job{
 		ID:       fmt.Sprintf("cron:%s:%d", file, e.Line),
@@ -158,6 +174,7 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 	c, err := schedule.ParseCron(e.Expr)
 	if err != nil {
 		j.State = job.StateUnknown
+		j.Err = "its schedule is invalid (" + err.Error() + ")"
 		return j
 	}
 	if d := c.Describe(); d != "" {

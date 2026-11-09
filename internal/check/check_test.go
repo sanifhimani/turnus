@@ -197,6 +197,12 @@ func TestRun(t *testing.T) {
 			want: []string{"missed-while-asleep"},
 		},
 		{
+			name: "invalid cron line",
+			job: job.Job{Source: job.Cron, Kind: job.Scheduled, Command: "* * * *", Line: 3,
+				File: "/etc/cron.d/app", Err: "it needs a schedule and a command"},
+			want: []string{"invalid-line"},
+		},
+		{
 			name: "builtin jobs are skipped",
 			job:  job.Job{Source: job.Launchd, Builtin: true, State: job.StateUnloaded},
 			want: nil,
