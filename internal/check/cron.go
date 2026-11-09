@@ -45,8 +45,11 @@ func output(j *job.Job, env Env) *job.Problem {
 		return nil
 	}
 	logDir := "~"
-	if env.GOOS == "darwin" {
+	switch {
+	case env.GOOS == "darwin":
 		logDir = "~/Library/Logs"
+	case j.Scope == job.System:
+		logDir = "/var/log"
 	}
 	fix := "Send output to a log by adding >> " + shellPath(logDir+"/"+j.Name+".log") + " 2>&1"
 
