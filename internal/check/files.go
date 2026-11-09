@@ -14,6 +14,14 @@ func invalidDefinition(j *job.Job, env Env) *job.Problem {
 	if j.Err == "" {
 		return nil
 	}
+	if j.Unreadable {
+		return &job.Problem{
+			Code:     "unreadable",
+			Severity: job.Warn,
+			Summary:  "turnus can't read this file (" + j.Err + "), so its jobs aren't shown",
+			Fix:      "Run sudo turnus to see them",
+		}
+	}
 	if j.Source == job.Cron {
 		fix := fmt.Sprintf("Fix line %d in %s", j.Line, env.tilde(j.File))
 		if j.Scope == job.User {

@@ -3,7 +3,9 @@ package crontab
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/user"
@@ -87,20 +89,45 @@ func discoverUser(ctx context.Context, now time.Time) ([]job.Job, error) {
 
 func discoverFile(path string, now time.Time) []job.Job {
 	f, err := os.Open(path)
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil
+	}
+	if err != nil {
+		return []job.Job{unreadable(path, err)}
 	}
 	defer f.Close()
 
+	// A read error part way through still leaves the lines before it.
 	entries, err := Parse(f, true)
-	if err != nil {
-		return nil
+	if err != nil && len(entries) == 0 {
+		return []job.Job{unreadable(path, err)}
 	}
 	jobs := make([]job.Job, 0, len(entries))
 	for _, e := range entries {
 		jobs = append(jobs, toJob(e, path, job.System, now))
 	}
 	return jobs
+}
+
+// unreadable stands in for a crontab file turnus couldn't open, so the
+// file shows up instead of its jobs silently going missing.
+func unreadable(path string, err error) job.Job {
+	reason := err.Error()
+	if errors.Is(err, fs.ErrPermission) {
+		reason = "permission denied"
+	}
+	return job.Job{
+		ID:         "cron:" + path,
+		Name:       filepath.Base(path),
+		Source:     job.Cron,
+		Scope:      job.System,
+		Kind:       job.Scheduled,
+		Schedule:   "unreadable",
+		State:      job.StateUnknown,
+		File:       path,
+		Err:        reason,
+		Unreadable: true,
+	}
 }
 
 func discoverPeriodic(dir, expr, sched string, now time.Time) []job.Job {

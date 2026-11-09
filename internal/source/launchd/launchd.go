@@ -3,6 +3,8 @@ package launchd
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -118,6 +120,9 @@ func readJob(path string, loc location, now time.Time) job.Job {
 	if err != nil {
 		j.Schedule = "unreadable"
 		j.Err = err.Error()
+		if errors.Is(err, fs.ErrPermission) {
+			j.Err, j.Unreadable = "permission denied", true
+		}
 		return j
 	}
 	if s.Label != "" {

@@ -203,6 +203,11 @@ func TestRun(t *testing.T) {
 			want: []string{"invalid-line"},
 		},
 		{
+			name: "unreadable cron file",
+			job:  job.Job{Source: job.Cron, Kind: job.Scheduled, File: "/etc/cron.d/secret", Err: "permission denied", Unreadable: true},
+			want: []string{"unreadable"},
+		},
+		{
 			name: "builtin jobs are skipped",
 			job:  job.Job{Source: job.Launchd, Builtin: true, State: job.StateUnloaded},
 			want: nil,
