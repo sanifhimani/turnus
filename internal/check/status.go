@@ -30,8 +30,14 @@ func lastRun(j *job.Job, env Env) *job.Problem {
 	}
 	code := *j.LastExit
 	fix := "Run it by hand to see the error"
-	if j.LogPath != "" {
+	switch {
+	case j.LogPath != "":
 		fix = "Check the log at " + env.tilde(j.LogPath)
+	case j.Unit != "":
+		fix = "See its output with journalctl -e -u " + j.Unit
+		if j.Scope == job.User {
+			fix = "See its output with journalctl --user -e -u " + j.Unit
+		}
 	}
 
 	if code < 0 {
