@@ -1,0 +1,17 @@
+gui/501 = {
+	type = login
+	handle = 501
+	services = {
+		   41452   (pe) 	com.apple.xpc.loginitemregisterd
+		    1820      - 	homebrew.mxcl.mysql
+		    1822      - 	com.logitech.LogiRightSight.Agent
+		       0      0 	com.apple.loginwindow.LWWeeklyMessageTracer
+		   89091      - 	com.logi.cp-dev-mgr
+		       0      1 	homebrew.mxcl.colima
+	}
+
+	disabled services = {
+		"com.docker.helper" => enabled
+		"com.apple.Siri.agent" => disabled
+	}
+}
