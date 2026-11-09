@@ -150,3 +150,19 @@ func BenchmarkTable(b *testing.B) {
 		_ = Table(&buf, jobs, Options{Width: 120, Now: now, Style: style.New(true)})
 	}
 }
+
+func TestFitDropsColumns(t *testing.T) {
+	scheduled, services := Group(sample(), now)
+	rows := append(scheduled, services...)
+
+	w := Fit(rows, 40, 0)
+	if w.Source != 0 || w.Last != 0 {
+		t.Errorf("at 40 columns source and last should be hidden: %+v", w)
+	}
+	if got := w.total(0); got > 40 {
+		t.Errorf("row is %d wide, want at most 40", got)
+	}
+	if w := Fit(rows, 0, 0); w.Source == 0 || w.Last == 0 {
+		t.Errorf("without a width limit every column shows: %+v", w)
+	}
+}

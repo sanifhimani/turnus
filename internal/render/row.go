@@ -136,16 +136,19 @@ func sortRows(rows []Row) {
 
 const (
 	gap         = "  "
+	roomyName   = 24
 	minName     = 16
 	minSchedule = 14
+	tiny        = 6
 )
 
 // Widths are column widths shared by every row in a list.
 type Widths struct{ Name, Schedule, When, Last, Source int }
 
 // Fit sizes columns to their content, then shrinks the name and schedule
-// columns until a row fits in width. Zero width means no limit. indent is
-// the space taken before the glyph.
+// columns until a row fits in width, dropping the source and last-run
+// columns if it still doesn't. Zero width means no limit. indent is the
+// space taken before the glyph.
 func Fit(rows []Row, width, indent int) Widths {
 	var w Widths
 	for _, r := range rows {
@@ -159,21 +162,42 @@ func Fit(rows []Row, width, indent int) Widths {
 		return w
 	}
 
-	// glyph and a space, then five columns separated by gaps
-	fixed := indent + 2 + w.When + w.Last + w.Source + 4*len(gap)
-	for over := fixed + w.Name + w.Schedule - width; over > 0; over-- {
+	// Give up space in order of usefulness: long schedules, long names, the
+	// source column, then everything down to a bare minimum.
+	for w.total(indent) > width {
 		switch {
-		case w.Name > minName && w.Name >= w.Schedule:
+		case w.Schedule > max(minSchedule, w.Name):
+			w.Schedule--
+		case w.Name > roomyName:
 			w.Name--
+		case w.Source > 0:
+			w.Source = 0
 		case w.Schedule > minSchedule:
 			w.Schedule--
 		case w.Name > minName:
+			w.Name--
+		case w.Last > 0:
+			w.Last = 0
+		case w.Schedule > tiny:
+			w.Schedule--
+		case w.Name > tiny:
 			w.Name--
 		default:
 			return w
 		}
 	}
 	return w
+}
+
+// total is the width of a full row. Hidden columns have zero width.
+func (w Widths) total(indent int) int {
+	n := indent + 2 + w.Name + len(gap) + w.Schedule + len(gap) + w.When
+	for _, c := range []int{w.Last, w.Source} {
+		if c > 0 {
+			n += len(gap) + c
+		}
+	}
+	return n
 }
 
 // Line draws a row. A bold row has its name in bold, for the selected row.
@@ -190,10 +214,14 @@ func (r Row) Line(w Widths, s style.Style, bold bool) string {
 	b.WriteString(s.Dim(Pad(Truncate(r.Schedule, w.Schedule), w.Schedule)))
 	b.WriteString(gap)
 	b.WriteString(Paint(s, r.WhenTone, Pad(r.When, w.When)))
-	b.WriteString(gap)
-	b.WriteString(Paint(s, r.LastTone, Pad(r.Last, w.Last)))
-	b.WriteString(gap)
-	b.WriteString(s.Dim(r.Source))
+	if w.Last > 0 {
+		b.WriteString(gap)
+		b.WriteString(Paint(s, r.LastTone, Pad(r.Last, w.Last)))
+	}
+	if w.Source > 0 {
+		b.WriteString(gap)
+		b.WriteString(s.Dim(r.Source))
+	}
 	return b.String()
 }
 
