@@ -10,14 +10,21 @@ import (
 	"github.com/sanifhimani/turnus/internal/schedule"
 )
 
-// crons parses the job's cron expressions. launchd calendar jobs may have
-// several, joined with ", ". It returns nil if any fail to parse.
+// crons parses the job's schedule as cron expressions. launchd calendar
+// jobs and systemd timers may have several, joined with ", ". It returns nil
+// if any can't be read as cron.
 func crons(j *job.Job) []*schedule.Cron {
 	if j.Kind != job.Scheduled || j.Expr == "" {
 		return nil
 	}
 	var out []*schedule.Cron
 	for e := range strings.SplitSeq(j.Expr, ", ") {
+		if j.Source == job.Systemd {
+			var ok bool
+			if e, ok = schedule.CronFromCalendar(e); !ok {
+				return nil
+			}
+		}
 		c, err := schedule.ParseCron(e)
 		if err != nil {
 			return nil
@@ -45,20 +52,30 @@ func neverRuns(j *job.Job, env Env) *job.Problem {
 	}
 }
 
-// missedWhileAsleep covers the two macOS schedulers that drop runs during
-// sleep. launchd calendar jobs run on wake instead, which is the fix.
+// missedWhileAsleep covers schedulers that drop runs while the machine is
+// asleep or off: cron and StartInterval on macOS, and systemd timers without
+// Persistent=true.
 func missedWhileAsleep(j *job.Job, env Env) *job.Problem {
-	if env.GOOS != "darwin" || j.Kind != job.Scheduled {
+	if j.Kind != job.Scheduled {
+		return nil
+	}
+	if j.Source == job.Systemd {
+		if j.Persistent || !loaded(j) || !infrequent(crons(j), env) {
+			return nil
+		}
+		return &job.Problem{
+			Code:     "missed-while-off",
+			Severity: job.Info,
+			Summary:  "Runs missed while the machine is off are skipped",
+			Fix:      "Add Persistent=true under [Timer] in " + env.tilde(j.File),
+		}
+	}
+	if env.GOOS != "darwin" {
 		return nil
 	}
 	switch j.Source {
 	case job.Cron:
-		// Jobs that run many times a day lose little to a skipped run.
-		cs := crons(j)
-		if len(cs) == 0 || cs[0].Reboot || cs[0].Next(env.Now).IsZero() {
-			return nil
-		}
-		if hours := cs[0].Hours(); len(hours) == 0 || len(hours) > 4 {
+		if !infrequent(crons(j), env) {
 			return nil
 		}
 		return &job.Problem{
@@ -80,6 +97,23 @@ func missedWhileAsleep(j *job.Job, env Env) *job.Problem {
 		}
 	}
 	return nil
+}
+
+// infrequent reports whether a schedule runs only a few times a day. Jobs
+// that run many times a day lose little to a skipped run.
+func infrequent(cs []*schedule.Cron, env Env) bool {
+	if len(cs) == 0 {
+		return false
+	}
+	for _, c := range cs {
+		if c.Reboot || c.Next(env.Now).IsZero() {
+			return false
+		}
+		if hours := c.Hours(); len(hours) == 0 || len(hours) > 4 {
+			return false
+		}
+	}
+	return true
 }
 
 // daylightSaving flags jobs pinned to 1 or 2 a.m., when most time zones
