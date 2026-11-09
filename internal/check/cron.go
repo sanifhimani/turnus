@@ -2,6 +2,7 @@ package check
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/sanifhimani/turnus/internal/job"
@@ -41,8 +42,7 @@ func output(j *job.Job, env Env) *job.Problem {
 	}
 	// Scripts in /etc/cron.daily and friends inherit the output handling of
 	// the run-parts line that runs the folder.
-	switch filepath.Dir(j.File) {
-	case "/etc/cron.hourly", "/etc/cron.daily", "/etc/cron.weekly", "/etc/cron.monthly":
+	if periodicDir(j.File) {
 		return nil
 	}
 	logDir := "~"
@@ -98,4 +98,36 @@ func percent(j *job.Job, env Env) *job.Problem {
 		Summary:  "cron ends the command at the first %, so the rest becomes its input",
 		Fix:      `Escape each % as \% if it's part of the command`,
 	}
+}
+
+// runPartsName matches the script names Debian's run-parts accepts. It skips
+// anything else, such as backup.sh, without saying so.
+var runPartsName = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+func skippedByRunParts(j *job.Job, env Env) *job.Problem {
+	if !env.DebianRunParts || j.Source != job.Cron || !periodicDir(j.File) {
+		return nil
+	}
+	name := filepath.Base(j.File)
+	if runPartsName.MatchString(name) {
+		return nil
+	}
+	fix := "Rename it using only letters, digits, - and _"
+	if base := strings.TrimSuffix(name, filepath.Ext(name)); runPartsName.MatchString(base) {
+		fix = "Rename it to " + base
+	}
+	return &job.Problem{
+		Code:     "skipped-by-run-parts",
+		Severity: job.Fail,
+		Summary:  "run-parts skips this script because of the characters in its name, so it never runs",
+		Fix:      fix,
+	}
+}
+
+func periodicDir(path string) bool {
+	switch filepath.Dir(path) {
+	case "/etc/cron.hourly", "/etc/cron.daily", "/etc/cron.weekly", "/etc/cron.monthly":
+		return true
+	}
+	return false
 }

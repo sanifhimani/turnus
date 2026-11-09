@@ -299,3 +299,30 @@ func TestObservesDST(t *testing.T) {
 		t.Error("UTC has no daylight saving")
 	}
 }
+
+func TestSkippedByRunParts(t *testing.T) {
+	env := testEnv(nil)
+	env.DebianRunParts = true
+	tests := []struct {
+		file string
+		fix  string
+	}{
+		{"/etc/cron.daily/backup.sh", "Rename it to backup"},
+		{"/etc/cron.daily/my.backup.sh", "Rename it using only letters, digits, - and _"},
+		{"/etc/cron.daily/backup", ""},
+		{"/etc/cron.d/backup.sh", ""},
+	}
+	for _, tt := range tests {
+		var fix string
+		if p := skippedByRunParts(&job.Job{Source: job.Cron, File: tt.file}, env); p != nil {
+			fix = p.Fix
+		}
+		if fix != tt.fix {
+			t.Errorf("%s: fix = %q, want %q", tt.file, fix, tt.fix)
+		}
+	}
+	env.DebianRunParts = false
+	if p := skippedByRunParts(&job.Job{Source: job.Cron, File: "/etc/cron.daily/backup.sh"}, env); p != nil {
+		t.Error("only Debian's run-parts skips dotted names")
+	}
+}

@@ -26,23 +26,30 @@ type Env struct {
 	// HasMail reports whether cron can deliver mail. Without a mail server,
 	// cron drops job output.
 	HasMail func() bool
+
+	// DebianRunParts is set on Debian and its derivatives, whose run-parts
+	// only runs scripts named with letters, digits, - and _.
+	DebianRunParts bool
 }
 
 // Local returns the environment of the machine Turnus is running on.
 func Local() Env {
 	home, _ := os.UserHomeDir()
 	return Env{
-		GOOS: runtime.GOOS,
-		Home: home,
-		UID:  os.Getuid(),
-		Now:  time.Now(),
-		Loc:  time.Local,
-		Stat: os.Stat,
-		HasMail: func() bool {
-			_, err := os.Stat("/usr/sbin/sendmail")
-			return err == nil
-		},
+		GOOS:           runtime.GOOS,
+		Home:           home,
+		UID:            os.Getuid(),
+		Now:            time.Now(),
+		Loc:            time.Local,
+		Stat:           os.Stat,
+		HasMail:        func() bool { return exists("/usr/sbin/sendmail") },
+		DebianRunParts: exists("/etc/debian_version"),
 	}
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 type checker func(*job.Job, Env) *job.Problem
@@ -63,6 +70,7 @@ var checkers = []checker{
 	protectedFolder,
 	output,
 	percent,
+	skippedByRunParts,
 }
 
 // Run records each job's problems, worst first. Jobs that ship with the OS
