@@ -62,6 +62,7 @@ var checkers = []checker{
 	daylightSaving,
 	protectedFolder,
 	output,
+	percent,
 }
 
 // Run records each job's problems, worst first. Jobs that ship with the OS

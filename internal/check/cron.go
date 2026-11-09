@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/sanifhimani/turnus/internal/job"
+	"github.com/sanifhimani/turnus/internal/source/crontab"
 )
 
 // Folders macOS guards with privacy permissions. cron needs Full Disk Access
@@ -83,4 +84,18 @@ func discardsStdout(cmd string) bool {
 		}
 	}
 	return false
+}
+
+// percent flags a % in a cron command. cron turns the first unescaped % into
+// a newline and passes the rest as input, so "date +%Y" breaks.
+func percent(j *job.Job, env Env) *job.Problem {
+	if j.Source != job.Cron || j.Err != "" || crontab.UnescapedPercent(j.Command) < 0 {
+		return nil
+	}
+	return &job.Problem{
+		Code:     "unescaped-percent",
+		Severity: job.Warn,
+		Summary:  "cron ends the command at the first %, so the rest becomes its input",
+		Fix:      `Escape each % as \% if it's part of the command`,
+	}
 }

@@ -208,6 +208,12 @@ func TestRun(t *testing.T) {
 			want: []string{"unreadable"},
 		},
 		{
+			name: "percent in a cron command",
+			job: job.Job{Source: job.Cron, Kind: job.Scheduled, Command: "/usr/bin/true $(date +%F) >> /Users/me/logs/x.log",
+				Program: "/usr/bin/true", Expr: "*/5 * * * *", LogPath: "/Users/me/logs/x.log"},
+			want: []string{"unescaped-percent"},
+		},
+		{
 			name: "builtin jobs are skipped",
 			job:  job.Job{Source: job.Launchd, Builtin: true, State: job.StateUnloaded},
 			want: nil,
