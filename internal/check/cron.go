@@ -1,6 +1,7 @@
 package check
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/sanifhimani/turnus/internal/job"
@@ -35,6 +36,12 @@ func protectedFolder(j *job.Job, env Env) *job.Problem {
 // somewhere nobody looks.
 func output(j *job.Job, env Env) *job.Problem {
 	if j.Source != job.Cron || j.LogPath != "" {
+		return nil
+	}
+	// Scripts in /etc/cron.daily and friends inherit the output handling of
+	// the run-parts line that runs the folder.
+	switch filepath.Dir(j.File) {
+	case "/etc/cron.hourly", "/etc/cron.daily", "/etc/cron.weekly", "/etc/cron.monthly":
 		return nil
 	}
 	logDir := "~"
