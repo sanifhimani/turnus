@@ -1,0 +1,95 @@
+// Package job defines the normalized view of a scheduled job, regardless of
+// which scheduler (cron, launchd, systemd) defines it.
+package job
+
+import "time"
+
+// Source is the scheduler that owns a job.
+type Source string
+
+const (
+	Cron    Source = "cron"
+	Launchd Source = "launchd"
+	Systemd Source = "systemd"
+)
+
+// Scope says whether a job runs as the current user or system-wide.
+type Scope string
+
+const (
+	User   Scope = "user"
+	System Scope = "system"
+)
+
+// Kind is whether a job runs on a schedule or as a long-running service.
+type Kind string
+
+const (
+	Scheduled Kind = "scheduled"
+	Service   Kind = "service"
+)
+
+// State is what the scheduler currently knows about a job.
+type State string
+
+const (
+	StateUnknown  State = "unknown"
+	StateRunning  State = "running"
+	StateIdle     State = "idle"
+	StateUnloaded State = "unloaded"
+	StateDisabled State = "disabled"
+)
+
+// Severity is how serious a problem is.
+type Severity int
+
+const (
+	Info Severity = iota
+	Warn
+	Fail
+)
+
+// Problem is an issue found with a job.
+type Problem struct {
+	Code     string   `json:"code"`
+	Severity Severity `json:"severity"`
+	Summary  string   `json:"summary"`
+	Fix      string   `json:"fix,omitempty"`
+}
+
+// Job is one scheduled or managed command on this machine.
+type Job struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Source   Source `json:"source"`
+	Scope    Scope  `json:"scope"`
+	Kind     Kind   `json:"kind"`
+	Vendored bool   `json:"vendored"`
+
+	Command string `json:"command"`
+	Program string `json:"program,omitempty"`
+
+	Schedule string    `json:"schedule"`
+	Expr     string    `json:"expr,omitempty"`
+	Next     time.Time `json:"next,omitzero"`
+
+	State    State `json:"state"`
+	PID      int   `json:"pid,omitempty"`
+	LastExit *int  `json:"last_exit,omitempty"`
+
+	File    string `json:"file"`
+	Line    int    `json:"line,omitempty"`
+	LogPath string `json:"log,omitempty"`
+
+	Problems []Problem `json:"problems,omitempty"`
+}
+
+// Worst returns the highest severity among the job's problems, or -1 when
+// the job has none.
+func (j *Job) Worst() Severity {
+	worst := Severity(-1)
+	for _, p := range j.Problems {
+		worst = max(worst, p.Severity)
+	}
+	return worst
+}
