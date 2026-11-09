@@ -1,0 +1,48 @@
+{
+  "scheduledTasks": [
+    {
+      "id": "triage-inbox",
+      "displayName": "Triage inbox",
+      "cronExpression": "0 9 * * 1-5",
+      "enabled": true,
+      "filePath": "testdata/triage-inbox/SKILL.md",
+      "createdAt": 1793000000000,
+      "lastRunAt": "2026-11-06T09:02:11.000Z",
+      "cwd": "/Users/me/work/inbox"
+    },
+    {
+      "id": "release-notes",
+      "displayName": "Draft release notes",
+      "cronExpression": "30 16 * * 5",
+      "enabled": true,
+      "filePath": "testdata/missing/SKILL.md",
+      "createdAt": 1793000000000,
+      "lastRunAt": "2026-10-31T16:31:00.000Z"
+    },
+    {
+      "id": "one-off",
+      "displayName": "Remind me about the demo",
+      "fireAt": 1794330000000,
+      "enabled": true,
+      "filePath": "testdata/missing/SKILL.md",
+      "createdAt": 1793000000000
+    },
+    {
+      "id": "by-hand",
+      "displayName": "Clean up branches",
+      "enabled": false,
+      "filePath": "testdata/missing/SKILL.md",
+      "createdAt": 1793000000000
+    }
+  ],
+  "recordedSkips": {
+    "release-notes": [
+      {"at": 1793462400000, "reason": "sign_in_required"},
+      {"at": 1794067260000, "reason": "folder_missing", "detail": "/Users/me/work/old-repo"}
+    ],
+    "triage-inbox": [
+      {"at": 1793000000000, "reason": "host_unavailable"}
+    ]
+  },
+  "sundayAliasBoundaryStamped": true
+}
