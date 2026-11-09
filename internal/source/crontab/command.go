@@ -1,0 +1,118 @@
+package crontab
+
+import (
+	"path/filepath"
+	"strings"
+)
+
+var interpreters = map[string]bool{
+	"sh": true, "bash": true, "zsh": true,
+	"python": true, "python3": true, "node": true, "bun": true, "deno": true,
+	"php": true, "ruby": true, "perl": true,
+}
+
+// commandName picks a short name for a shell command and, when it can tell,
+// the program or script that the command runs.
+//
+//	cd /srv/app && ./bin/backup.sh  ->  backup.sh, /srv/app/bin/backup.sh
+//	/usr/bin/python3 /opt/sync.py   ->  sync.py, /opt/sync.py
+func commandName(cmd string) (name, program string) {
+	var dir string
+	for seg := range strings.SplitSeq(cmd, "&&") {
+		fields := shellFields(seg)
+		if len(fields) == 0 {
+			continue
+		}
+		if fields[0] == "cd" && len(fields) > 1 {
+			dir = fields[1]
+			continue
+		}
+
+		i := 0
+		for i < len(fields) && strings.Contains(fields[i], "=") {
+			i++
+		}
+		if i == len(fields) {
+			continue
+		}
+		prog := fields[i]
+		if interpreters[filepath.Base(prog)] && i+1 < len(fields) && !strings.HasPrefix(fields[i+1], "-") {
+			prog = fields[i+1]
+		}
+		prog = strings.TrimRight(prog, ";")
+
+		switch {
+		case filepath.IsAbs(prog):
+			program = prog
+		case strings.Contains(prog, "/") && filepath.IsAbs(dir):
+			program = filepath.Join(dir, prog)
+		}
+		return filepath.Base(prog), program
+	}
+	return strings.TrimSpace(cmd), ""
+}
+
+// logPath returns the file that stdout is appended or written to, if any.
+func logPath(cmd string) string {
+	fields := shellFields(cmd)
+	for i, f := range fields {
+		var target string
+		switch {
+		case f == ">" || f == ">>" || f == "1>" || f == "1>>":
+			if i+1 < len(fields) {
+				target = fields[i+1]
+			}
+		case strings.HasPrefix(f, ">>"):
+			target = f[2:]
+		case strings.HasPrefix(f, ">") && !strings.HasPrefix(f, ">&"):
+			target = f[1:]
+		}
+		if filepath.IsAbs(target) && target != "/dev/null" {
+			return target
+		}
+	}
+	return ""
+}
+
+// shellFields splits a command into words the way a POSIX shell would,
+// honoring single quotes, double quotes, and backslash escapes. It does not
+// expand variables.
+func shellFields(s string) []string {
+	var (
+		fields []string
+		word   strings.Builder
+		inWord bool
+		quote  rune
+		escape bool
+	)
+	for _, r := range s {
+		switch {
+		case escape:
+			word.WriteRune(r)
+			escape = false
+		case r == '\\' && quote != '\'':
+			escape, inWord = true, true
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			} else {
+				word.WriteRune(r)
+			}
+		case r == '\'' || r == '"':
+			quote, inWord = r, true
+		case r == ' ' || r == '\t':
+			if inWord {
+				fields = append(fields, word.String())
+				word.Reset()
+				inWord = false
+			}
+		default:
+			word.WriteRune(r)
+			inWord = true
+		}
+	}
+	if inWord {
+		fields = append(fields, word.String())
+	}
+	return fields
+}
