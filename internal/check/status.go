@@ -64,6 +64,12 @@ func lastRun(j *job.Job, env Env) *job.Problem {
 		}
 		summary = "launchd couldn't start it (exit 78, bad configuration)"
 		fix = "Check the paths and keys in " + env.tilde(j.File)
+	case code == 203 && j.Source == job.Systemd:
+		if hasFail(j) {
+			return nil
+		}
+		summary = "systemd couldn't run the program (exit 203)"
+		fix = "Check ExecStart in " + j.Unit
 	case code == 126:
 		summary = "Last run failed: command isn't executable (exit 126)"
 	case code == 127:
@@ -73,17 +79,32 @@ func lastRun(j *job.Job, env Env) *job.Problem {
 }
 
 func unloaded(j *job.Job, env Env) *job.Problem {
-	if j.Source != job.Launchd || j.State != job.StateUnloaded || j.Err != "" || j.Command == "" {
+	if j.State != job.StateUnloaded || j.Err != "" || j.Command == "" {
 		return nil
 	}
-	fix := fmt.Sprintf("launchctl bootstrap gui/%d %s", env.UID, shellPath(env.tilde(j.File)))
-	if j.Scope == job.System {
-		fix = "sudo launchctl bootstrap system " + shellPath(j.File)
+	switch j.Source {
+	case job.Launchd:
+		fix := fmt.Sprintf("launchctl bootstrap gui/%d %s", env.UID, shellPath(env.tilde(j.File)))
+		if j.Scope == job.System {
+			fix = "sudo launchctl bootstrap system " + shellPath(j.File)
+		}
+		return &job.Problem{
+			Code:     "unloaded",
+			Severity: job.Warn,
+			Summary:  "Not loaded, so it never runs",
+			Fix:      fix,
+		}
+	case job.Systemd:
+		fix := "sudo systemctl start " + j.Name + ".timer"
+		if j.Scope == job.User {
+			fix = "systemctl --user start " + j.Name + ".timer"
+		}
+		return &job.Problem{
+			Code:     "unloaded",
+			Severity: job.Warn,
+			Summary:  "Timer is enabled but not started, so it never runs",
+			Fix:      fix,
+		}
 	}
-	return &job.Problem{
-		Code:     "unloaded",
-		Severity: job.Warn,
-		Summary:  "Not loaded, so it never runs",
-		Fix:      fix,
-	}
+	return nil
 }
