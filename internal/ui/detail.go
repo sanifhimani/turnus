@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/sanifhimani/turnus/internal/job"
@@ -86,8 +87,12 @@ func status(j *job.Job) string {
 	if j.PID > 0 {
 		parts = append(parts, fmt.Sprintf("pid %d", j.PID))
 	}
-	if j.LastExit != nil {
-		parts = append(parts, fmt.Sprintf("last exit %d", *j.LastExit))
+	switch code := j.LastExit; {
+	case code == nil:
+	case *code < 0:
+		parts = append(parts, fmt.Sprintf("last run killed (%s)", syscall.Signal(-*code)))
+	default:
+		parts = append(parts, fmt.Sprintf("last exit %d", *code))
 	}
 	if j.Source == job.Cron {
 		parts = append(parts, "cron keeps no run history")
