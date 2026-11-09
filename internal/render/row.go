@@ -83,6 +83,8 @@ func NewRow(j *job.Job, now time.Time) Row {
 	}
 
 	switch code := j.LastExit; {
+	case code == nil && j.LastResult != "":
+		r.Last, r.LastTone = lastResult(j)
 	case code == nil:
 		r.Last = "–"
 	case *code == 0:
@@ -98,6 +100,17 @@ func NewRow(j *job.Job, now time.Time) Row {
 		r.Last, r.LastTone = fmt.Sprintf("exit %d", *code), Bad
 	}
 	return r
+}
+
+// lastResult shortens how an agent scheduler described the last run.
+func lastResult(j *job.Job) (string, Tone) {
+	switch {
+	case j.LastResult == "ok" || j.LastResult == "delivery_queued":
+		return "ok", Muted
+	case j.Source == job.Claude:
+		return "skipped", Bad
+	}
+	return "failed", Bad
 }
 
 // Group splits jobs into scheduled jobs and services, each with broken jobs

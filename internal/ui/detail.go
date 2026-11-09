@@ -47,6 +47,9 @@ func (m *model) describe(j *job.Job) []string {
 	}
 	field("file", file)
 	field("log", tilde(j.LogPath))
+	if j.Host != "" {
+		field("needs", j.Host)
+	}
 	if j.Unit != "" {
 		field("journal", "journalctl -u "+j.Unit)
 	}
@@ -87,6 +90,9 @@ func status(j *job.Job) string {
 	if j.PID > 0 {
 		parts = append(parts, fmt.Sprintf("pid %d", j.PID))
 	}
+	if !j.LastRun.IsZero() {
+		parts = append(parts, "last ran "+ago(j.LastRun, time.Now()))
+	}
 	switch code := j.LastExit; {
 	case code == nil:
 	case *code < 0:
@@ -120,6 +126,22 @@ func when(t, now time.Time) string {
 		return t.Format("Mon ") + clock
 	}
 	return t.Format("Jan 2 ") + clock
+}
+
+// ago formats a past time like "3h ago" or "Nov 2".
+func ago(t, now time.Time) string {
+	d := now.Sub(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	case d < 7*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	}
+	return t.Local().Format("Jan 2")
 }
 
 var home, _ = os.UserHomeDir()
