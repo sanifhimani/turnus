@@ -32,11 +32,20 @@ go install github.com/sanifhimani/turnus/cmd/turnus@latest
 Run `turnus` to browse your jobs, or `turnus ls` to print them as a table.
 
 ```sh
-turnus            # open the browser
-turnus ls         # print the table
-turnus ls --json  # print JSON
-turnus -a         # include jobs that ship with the OS
+turnus             # open the browser
+turnus ls          # print the table
+turnus ls --json   # print JSON
+turnus ls --check  # exit with status 1 if any job is failing
+turnus -a          # include jobs that ship with the OS
 ```
+
+`--check` lets you run turnus from CI or from cron as a watchdog. turnus exits
+with status 0 when no job is failing, 1 when at least one is, and 2 when it hits
+an error. Warnings don't change the exit status.
+
+`--json` prints an object with a `version` number, the `jobs`, and any `errors`
+from schedulers turnus couldn't read. The version changes only when a field is
+removed or changes meaning.
 
 The browser uses these keys.
 
