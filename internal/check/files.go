@@ -13,6 +13,14 @@ func invalidDefinition(j *job.Job, env Env) *job.Problem {
 	if j.Err == "" {
 		return nil
 	}
+	if j.Source == job.Systemd {
+		return &job.Problem{
+			Code:     "missing-unit",
+			Severity: job.Fail,
+			Summary:  "Timer starts " + j.Unit + ", which doesn't exist",
+			Fix:      "Create " + j.Unit + ", or remove the timer",
+		}
+	}
 	fix := "Run plutil -lint " + env.tilde(j.File) + " to see the error"
 	if loaded(j) {
 		return &job.Problem{
