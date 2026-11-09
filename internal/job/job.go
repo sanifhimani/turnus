@@ -49,6 +49,17 @@ const (
 	Fail
 )
 
+var severityNames = [...]string{"info", "warn", "fail"}
+
+func (s Severity) String() string {
+	if s < 0 || int(s) >= len(severityNames) {
+		return "none"
+	}
+	return severityNames[s]
+}
+
+func (s Severity) MarshalText() ([]byte, error) { return []byte(s.String()), nil }
+
 // Problem is an issue found with a job.
 type Problem struct {
 	Code     string   `json:"code"`
