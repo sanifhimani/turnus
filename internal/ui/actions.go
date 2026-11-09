@@ -49,6 +49,14 @@ func (m *model) edit(j *job.Job) tea.Cmd {
 }
 
 func (m *model) openLog(j *job.Job) tea.Cmd {
+	// systemd keeps service output in the journal. -e starts at the end.
+	if j.Source == job.Systemd && j.Unit != "" {
+		args := []string{"-e", "-u", j.Unit}
+		if j.Scope == job.User {
+			args = append([]string{"--user"}, args...)
+		}
+		return run(exec.Command("journalctl", args...))
+	}
 	if j.LogPath == "" {
 		return m.flash("This job doesn't write a log file")
 	}

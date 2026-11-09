@@ -46,6 +46,9 @@ func (m *model) describe(j *job.Job) []string {
 	}
 	field("file", file)
 	field("log", tilde(j.LogPath))
+	if j.Unit != "" {
+		field("journal", "journalctl -u "+j.Unit)
+	}
 
 	for _, p := range j.Problems {
 		glyph, tone := "·", render.Muted
