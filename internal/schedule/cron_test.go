@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -78,6 +79,27 @@ func TestNextReboot(t *testing.T) {
 	}
 	if got := c.Next(time.Now()); !got.IsZero() {
 		t.Errorf("Next = %v, want zero", got)
+	}
+}
+
+func TestHours(t *testing.T) {
+	tests := []struct {
+		expr string
+		want []int
+	}{
+		{"* * * * *", nil},
+		{"30 2 * * *", []int{2}},
+		{"0 1-3 * * *", []int{1, 2, 3}},
+		{"@reboot", nil},
+	}
+	for _, tt := range tests {
+		c, err := ParseCron(tt.expr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := c.Hours(); !slices.Equal(got, tt.want) {
+			t.Errorf("Hours(%q) = %v, want %v", tt.expr, got, tt.want)
+		}
 	}
 }
 
