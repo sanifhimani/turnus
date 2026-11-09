@@ -5,9 +5,11 @@ package check
 import (
 	"cmp"
 	"os"
+	"os/exec"
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sanifhimani/turnus/internal/job"
@@ -30,6 +32,9 @@ type Env struct {
 	// DebianRunParts is set on Debian and its derivatives, whose run-parts
 	// only runs scripts named with letters, digits, - and _.
 	DebianRunParts bool
+
+	// Running reports whether a process with this exact name is running.
+	Running func(name string) bool
 }
 
 // Local returns the environment of the machine Turnus is running on.
@@ -44,6 +49,26 @@ func Local() Env {
 		Stat:           os.Stat,
 		HasMail:        func() bool { return exists("/usr/sbin/sendmail") },
 		DebianRunParts: exists("/etc/debian_version"),
+		Running:        running(),
+	}
+}
+
+// running returns a lookup that asks pgrep once per process name, since
+// several jobs can depend on the same app.
+func running() func(string) bool {
+	var (
+		mu   sync.Mutex
+		seen = map[string]bool{}
+	)
+	return func(name string) bool {
+		mu.Lock()
+		defer mu.Unlock()
+		if up, ok := seen[name]; ok {
+			return up
+		}
+		up := exec.Command("pgrep", "-x", name).Run() == nil
+		seen[name] = up
+		return up
 	}
 }
 
@@ -71,6 +96,8 @@ var checkers = []checker{
 	output,
 	percent,
 	skippedByRunParts,
+	lastResult,
+	hostRequired,
 }
 
 // Run records each job's problems, worst first. Jobs that ship with the OS

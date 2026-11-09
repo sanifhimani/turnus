@@ -34,6 +34,15 @@ func invalidDefinition(j *job.Job, env Env) *job.Problem {
 			Fix:      fix,
 		}
 	}
+	switch j.Source {
+	case job.Claude, job.Codex, job.Hermes:
+		return &job.Problem{
+			Code:     "unknown-format",
+			Severity: job.Warn,
+			Summary:  "turnus can't read this file because " + j.Err,
+			Fix:      "Update turnus, or open an issue if you're on the latest version",
+		}
+	}
 	if j.Source == job.Systemd {
 		return &job.Problem{
 			Code:     "missing-unit",
