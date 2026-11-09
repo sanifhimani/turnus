@@ -81,6 +81,10 @@ type Job struct {
 	Program string            `json:"program,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
 
+	// Interpreted is set when Program is a script handed to an interpreter,
+	// as in "sh backup.sh", so it does not need to be executable.
+	Interpreted bool `json:"-"`
+
 	Schedule string    `json:"schedule"`
 	Expr     string    `json:"expr,omitempty"`
 	Next     time.Time `json:"next,omitzero"`

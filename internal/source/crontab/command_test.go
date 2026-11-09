@@ -6,21 +6,24 @@ import (
 )
 
 func TestCommandName(t *testing.T) {
-	tests := []struct{ cmd, name, program string }{
-		{"/usr/local/bin/backup.sh >> /var/log/b.log 2>&1", "backup.sh", "/usr/local/bin/backup.sh"},
-		{"cd /srv/app && ./bin/sync --fast", "sync", "/srv/app/bin/sync"},
-		{"/usr/bin/python3 /opt/jobs/report.py --daily", "report.py", "/opt/jobs/report.py"},
-		{"php artisan schedule:run", "artisan", ""},
-		{"FOO=1 BAR=2 /usr/bin/thing", "thing", "/usr/bin/thing"},
-		{"bash -c 'echo hi'", "bash", ""},
-		{"curl -fsS https://example.com/ping", "curl", ""},
-		{`"/Users/me/Library/Application Support/x/run.sh" --now`, "run.sh", "/Users/me/Library/Application Support/x/run.sh"},
-		{`/opt/My\ Scripts/sync.sh`, "sync.sh", "/opt/My Scripts/sync.sh"},
+	tests := []struct {
+		cmd, name, program string
+		interpreted        bool
+	}{
+		{"/usr/local/bin/backup.sh >> /var/log/b.log 2>&1", "backup.sh", "/usr/local/bin/backup.sh", false},
+		{"cd /srv/app && ./bin/sync --fast", "sync", "/srv/app/bin/sync", false},
+		{"/usr/bin/python3 /opt/jobs/report.py --daily", "report.py", "/opt/jobs/report.py", true},
+		{"php artisan schedule:run", "artisan", "", true},
+		{"FOO=1 BAR=2 /usr/bin/thing", "thing", "/usr/bin/thing", false},
+		{"bash -c 'echo hi'", "bash", "", false},
+		{"curl -fsS https://example.com/ping", "curl", "", false},
+		{`"/Users/me/Library/Application Support/x/run.sh" --now`, "run.sh", "/Users/me/Library/Application Support/x/run.sh", false},
+		{`/opt/My\ Scripts/sync.sh`, "sync.sh", "/opt/My Scripts/sync.sh", false},
 	}
 	for _, tt := range tests {
-		name, program := commandName(tt.cmd)
-		if name != tt.name || program != tt.program {
-			t.Errorf("commandName(%q) = %q, %q; want %q, %q", tt.cmd, name, program, tt.name, tt.program)
+		name, program, interpreted := commandName(tt.cmd)
+		if name != tt.name || program != tt.program || interpreted != tt.interpreted {
+			t.Errorf("commandName(%q) = %q, %q, %v; want %q, %q, %v", tt.cmd, name, program, interpreted, tt.name, tt.program, tt.interpreted)
 		}
 	}
 }

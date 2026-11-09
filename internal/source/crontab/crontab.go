@@ -128,7 +128,7 @@ func discoverPeriodic(dir, expr, sched string, now time.Time) []job.Job {
 }
 
 func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
-	name, program := commandName(e.Command)
+	name, program, interpreted := commandName(e.Command)
 	j := job.Job{
 		ID:       fmt.Sprintf("cron:%s:%d", file, e.Line),
 		Name:     name,
@@ -144,6 +144,8 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 		File:     file,
 		Line:     e.Line,
 		LogPath:  logPath(e.Command),
+
+		Interpreted: interpreted,
 	}
 
 	c, err := schedule.ParseCron(e.Expr)

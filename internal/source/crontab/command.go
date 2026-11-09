@@ -12,11 +12,12 @@ var interpreters = map[string]bool{
 }
 
 // commandName picks a short name for a shell command and, when it can tell,
-// the program or script that the command runs.
+// the program or script that the command runs. interpreted is set when that
+// script is passed to an interpreter such as sh or python.
 //
 //	cd /srv/app && ./bin/backup.sh  ->  backup.sh, /srv/app/bin/backup.sh
 //	/usr/bin/python3 /opt/sync.py   ->  sync.py, /opt/sync.py
-func commandName(cmd string) (name, program string) {
+func commandName(cmd string) (name, program string, interpreted bool) {
 	var dir string
 	for seg := range strings.SplitSeq(cmd, "&&") {
 		fields := shellFields(seg)
@@ -38,6 +39,7 @@ func commandName(cmd string) (name, program string) {
 		prog := fields[i]
 		if interpreters[filepath.Base(prog)] && i+1 < len(fields) && !strings.HasPrefix(fields[i+1], "-") {
 			prog = fields[i+1]
+			interpreted = true
 		}
 		prog = strings.TrimRight(prog, ";")
 
@@ -47,9 +49,9 @@ func commandName(cmd string) (name, program string) {
 		case strings.Contains(prog, "/") && filepath.IsAbs(dir):
 			program = filepath.Join(dir, prog)
 		}
-		return filepath.Base(prog), program
+		return filepath.Base(prog), program, interpreted
 	}
-	return strings.TrimSpace(cmd), ""
+	return strings.TrimSpace(cmd), "", false
 }
 
 // logPath returns the file that stdout is appended or written to, if any.
