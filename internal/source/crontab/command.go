@@ -19,14 +19,26 @@ var interpreters = map[string]bool{
 //	/usr/bin/python3 /opt/sync.py   ->  sync.py, /opt/sync.py
 func commandName(cmd string) (name, program string, interpreted bool) {
 	var dir string
-	for seg := range strings.SplitSeq(cmd, "&&") {
+	for _, seg := range segments(cmd) {
 		fields := shellFields(seg)
+		for len(fields) > 0 && (fields[0] == "{" || fields[0] == "(") {
+			fields = fields[1:]
+		}
 		if len(fields) == 0 {
 			continue
 		}
-		if fields[0] == "cd" && len(fields) > 1 {
-			dir = fields[1]
+		switch fields[0] {
+		case "cd":
+			if len(fields) > 1 {
+				dir = fields[1]
+			}
 			continue
+		case "test", "[", "[[":
+			continue
+		}
+		// Debian's /etc/crontab runs whole folders: name the folder.
+		if filepath.Base(fields[0]) == "run-parts" {
+			return filepath.Base(strings.TrimRight(fields[len(fields)-1], ";}")), "", false
 		}
 
 		i := 0
@@ -52,6 +64,13 @@ func commandName(cmd string) (name, program string, interpreted bool) {
 		return filepath.Base(prog), program, interpreted
 	}
 	return strings.TrimSpace(cmd), "", false
+}
+
+// segments splits a command line on the shell's list operators.
+func segments(cmd string) []string {
+	return strings.FieldsFunc(strings.NewReplacer("&&", "\x00", "||", "\x00", ";", "\x00").Replace(cmd), func(r rune) bool {
+		return r == 0
+	})
 }
 
 // logPath returns the file that stdout is appended or written to, if any.
