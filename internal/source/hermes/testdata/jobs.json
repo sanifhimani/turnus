@@ -1,0 +1,37 @@
+{
+  "jobs": [
+    {
+      "id": "a1b2c3",
+      "name": "morning-brief",
+      "prompt": "Summarize my unread email\nand post it to Telegram",
+      "schedule": {"kind": "cron", "expr": "0 8 * * 1-5", "display": "0 8 * * 1-5"},
+      "repeat": {"times": null, "completed": 12},
+      "enabled": true,
+      "state": "scheduled",
+      "next_run_at": "2026-11-10T08:00:00Z",
+      "last_run_at": "2026-11-09T08:00:12Z",
+      "last_status": "ok",
+      "timezone": "UTC"
+    },
+    {
+      "id": "d4e5f6",
+      "name": "price-watch",
+      "prompt": "Check the price of the GPU on the usual sites",
+      "schedule": {"kind": "interval", "minutes": 30, "display": "every 30m"},
+      "enabled": true,
+      "state": "scheduled",
+      "next_run_at": 1794240000,
+      "last_run_at": 1794238200,
+      "last_status": "error"
+    },
+    {
+      "id": "g7h8i9",
+      "name": "weekly-digest",
+      "prompt": "Write the weekly digest",
+      "schedule": {"kind": "cron", "expr": "0 17 * * 5"},
+      "enabled": false,
+      "state": "paused",
+      "paused_at": "2026-11-01T10:00:00Z"
+    }
+  ]
+}
