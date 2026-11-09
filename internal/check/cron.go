@@ -59,6 +59,8 @@ func output(j *job.Job, env Env) *job.Problem {
 		summary = "Output is discarded because MAILTO is empty"
 	case set:
 		return nil
+	case env.HasMail != nil && !env.HasMail():
+		summary = "Output is discarded because no mail server is installed"
 	default:
 		summary = "Output goes to local mail, which few people read"
 	}

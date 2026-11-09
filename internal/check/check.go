@@ -22,6 +22,10 @@ type Env struct {
 	Now  time.Time
 	Loc  *time.Location
 	Stat func(string) (os.FileInfo, error)
+
+	// HasMail reports whether cron can deliver mail. Without a mail server,
+	// cron drops job output.
+	HasMail func() bool
 }
 
 // Local returns the environment of the machine Turnus is running on.
@@ -34,6 +38,10 @@ func Local() Env {
 		Now:  time.Now(),
 		Loc:  time.Local,
 		Stat: os.Stat,
+		HasMail: func() bool {
+			_, err := os.Stat("/usr/sbin/sendmail")
+			return err == nil
+		},
 	}
 }
 
