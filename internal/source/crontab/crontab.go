@@ -19,13 +19,16 @@ import (
 	"github.com/sanifhimani/turnus/internal/schedule"
 )
 
-// Periodic directories run by run-parts or anacron on most Linux systems.
-var periodic = []struct{ dir, expr, schedule string }{
-	{"/etc/cron.hourly", "@hourly", "hourly"},
-	{"/etc/cron.daily", "@daily", "daily"},
-	{"/etc/cron.weekly", "@weekly", "weekly"},
-	{"/etc/cron.monthly", "@monthly", "monthly"},
+// Periodic folders, run by run-parts from a crontab line or by anacron on
+// most Linux systems.
+var periodic = []struct{ dir, schedule string }{
+	{"/etc/cron.hourly", "hourly"},
+	{"/etc/cron.daily", "daily"},
+	{"/etc/cron.weekly", "weekly"},
+	{"/etc/cron.monthly", "monthly"},
 }
+
+const anacron = "/usr/sbin/anacron"
 
 // Discover returns jobs from the current user's crontab and the system
 // crontabs. Missing files are not errors. Jobs installed by OS packages are
@@ -50,8 +53,11 @@ func Discover(ctx context.Context, now time.Time, builtin bool) ([]job.Job, erro
 		jobs = append(jobs, discoverFile(f, now)...)
 	}
 
+	_, err = os.Stat(anacron)
+	hasAnacron := err == nil
 	for _, p := range periodic {
-		jobs = append(jobs, discoverPeriodic(p.dir, p.expr, p.schedule, now)...)
+		r := findRunner(jobs, p.dir, hasAnacron)
+		jobs = append(jobs, discoverPeriodic(p.dir, p.schedule, r, now)...)
 	}
 
 	markBuiltin(jobs, packageFiles(dpkgStatus))
@@ -130,12 +136,48 @@ func unreadable(path string, err error) job.Job {
 	}
 }
 
-func discoverPeriodic(dir, expr, sched string, now time.Time) []job.Job {
+// runner is what runs a periodic folder: a crontab line, anacron, or
+// nothing turnus can find.
+type runner struct {
+	expr    string
+	anacron bool
+}
+
+// findRunner looks for the crontab line that runs dir with run-parts. On
+// Debian the daily, weekly and monthly lines defer to anacron when it is
+// installed. Red Hat has no such lines and runs those folders from anacron.
+func findRunner(jobs []job.Job, dir string, hasAnacron bool) runner {
+	for _, j := range jobs {
+		if !strings.Contains(j.Command, "run-parts") || !strings.Contains(j.Command, dir) {
+			continue
+		}
+		if hasAnacron && strings.Contains(j.Command, "anacron") {
+			return runner{anacron: true}
+		}
+		return runner{expr: j.Expr}
+	}
+	return runner{anacron: hasAnacron}
+}
+
+func discoverPeriodic(dir, sched string, r runner, now time.Time) []job.Job {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil
 	}
-	c, _ := schedule.ParseCron(expr)
+
+	var next time.Time
+	switch {
+	case r.anacron:
+		sched += " through anacron"
+	case r.expr != "":
+		if c, err := schedule.ParseCron(r.expr); err == nil {
+			if d := c.Describe(); d != "" {
+				sched = d
+			}
+			next = c.Next(now)
+		}
+	}
+
 	var jobs []job.Job
 	for _, de := range entries {
 		name := de.Name()
@@ -152,8 +194,8 @@ func discoverPeriodic(dir, expr, sched string, now time.Time) []job.Job {
 			Command:  path,
 			Program:  path,
 			Schedule: sched,
-			Expr:     expr,
-			Next:     c.Next(now),
+			Expr:     r.expr,
+			Next:     next,
 			State:    job.StateIdle,
 			File:     path,
 		})

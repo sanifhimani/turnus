@@ -43,3 +43,26 @@ func TestUnreadable(t *testing.T) {
 		t.Errorf("err = %q", j.Err)
 	}
 }
+
+func TestFindRunner(t *testing.T) {
+	debian := []job.Job{
+		{Expr: "17 * * * *", Command: "cd / && run-parts --report /etc/cron.hourly"},
+		{Expr: "25 6 * * *", Command: "test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.daily; }"},
+	}
+	tests := []struct {
+		dir     string
+		anacron bool
+		want    runner
+	}{
+		{"/etc/cron.hourly", true, runner{expr: "17 * * * *"}},
+		{"/etc/cron.daily", false, runner{expr: "25 6 * * *"}},
+		{"/etc/cron.daily", true, runner{anacron: true}},
+		{"/etc/cron.weekly", true, runner{anacron: true}},
+		{"/etc/cron.weekly", false, runner{}},
+	}
+	for _, tt := range tests {
+		if got := findRunner(debian, tt.dir, tt.anacron); got != tt.want {
+			t.Errorf("findRunner(%s, anacron=%v) = %+v, want %+v", tt.dir, tt.anacron, got, tt.want)
+		}
+	}
+}
