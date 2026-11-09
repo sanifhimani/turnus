@@ -12,6 +12,7 @@ import (
 	"github.com/sanifhimani/turnus/internal/job"
 	"github.com/sanifhimani/turnus/internal/source/crontab"
 	"github.com/sanifhimani/turnus/internal/source/launchd"
+	"github.com/sanifhimani/turnus/internal/source/systemd"
 )
 
 // Options controls what Discover returns.
@@ -33,6 +34,9 @@ func Discover(ctx context.Context, opts Options) ([]job.Job, []error) {
 		{"cron", crontab.Discover},
 		{"launchd", func(ctx context.Context, now time.Time) ([]job.Job, error) {
 			return launchd.Discover(ctx, now, opts.Builtin)
+		}},
+		{"systemd", func(ctx context.Context, now time.Time) ([]job.Job, error) {
+			return systemd.Discover(ctx, now, opts.Builtin)
 		}},
 	}
 
