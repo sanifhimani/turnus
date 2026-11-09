@@ -41,8 +41,11 @@ func TestRunJSON(t *testing.T) {
 	if code := run([]string{"--json", "-a", "ls"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
-	var jobs []map[string]any
-	if err := json.Unmarshal(stdout.Bytes(), &jobs); err != nil {
-		t.Fatalf("output is not a JSON array: %v", err)
+	var out struct {
+		Version int              `json:"version"`
+		Jobs    []map[string]any `json:"jobs"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil || out.Version != 1 || out.Jobs == nil {
+		t.Fatalf("unexpected output: %v\n%s", err, stdout.String())
 	}
 }

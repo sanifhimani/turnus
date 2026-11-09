@@ -88,26 +88,31 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return list(opts, stdout, stderr)
 }
 
-// load finds and checks jobs. Errors from a source are reported to errw,
-// and the jobs from the other sources are still returned.
-func load(all bool, errw io.Writer) []job.Job {
+// load finds and checks jobs. A source that fails returns an error, and the
+// jobs from the other sources are still returned.
+func load(all bool) ([]job.Job, []error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	jobs, errs := discover.Discover(ctx, discover.Options{Builtin: all})
 	check.Run(jobs, check.Local())
-	if errw != nil {
-		for _, err := range errs {
-			fmt.Fprintln(errw, "turnus:", err)
-		}
+	return jobs, errs
+}
+
+func report(w io.Writer, errs []error) {
+	for _, err := range errs {
+		fmt.Fprintln(w, "turnus:", err)
 	}
-	return jobs
 }
 
 func browse(opts options, stderr io.Writer) int {
-	jobs := load(opts.all, stderr)
+	jobs, errs := load(opts.all)
 	// Errors are printed once, before the screen is taken over.
-	reload := func(all bool) []job.Job { return load(all, nil) }
+	report(stderr, errs)
+	reload := func(all bool) []job.Job {
+		jobs, _ := load(all)
+		return jobs
+	}
 
 	m := ui.New(reload, jobs, opts.all, style.For(os.Stdout))
 	if _, err := tea.NewProgram(m).Run(); err != nil {
@@ -118,11 +123,12 @@ func browse(opts options, stderr io.Writer) int {
 }
 
 func list(opts options, stdout, stderr io.Writer) int {
-	jobs := load(opts.all, stderr)
+	jobs, errs := load(opts.all)
+	report(stderr, errs)
 
 	var err error
 	if opts.json {
-		err = render.JSON(stdout, jobs)
+		err = render.JSON(stdout, jobs, errs)
 	} else {
 		err = render.Table(stdout, jobs, render.Options{
 			Width: termWidth(),
