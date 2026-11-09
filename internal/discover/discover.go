@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/sanifhimani/turnus/internal/job"
+	"github.com/sanifhimani/turnus/internal/source/claude"
+	"github.com/sanifhimani/turnus/internal/source/codex"
 	"github.com/sanifhimani/turnus/internal/source/crontab"
+	"github.com/sanifhimani/turnus/internal/source/hermes"
 	"github.com/sanifhimani/turnus/internal/source/launchd"
 	"github.com/sanifhimani/turnus/internal/source/systemd"
 )
@@ -40,6 +43,9 @@ func Discover(ctx context.Context, opts Options) ([]job.Job, []error) {
 		{"systemd", func(ctx context.Context, now time.Time) ([]job.Job, error) {
 			return systemd.Discover(ctx, now, opts.Builtin)
 		}},
+		{"claude", func(_ context.Context, now time.Time) ([]job.Job, error) { return claude.Discover(now) }},
+		{"codex", func(_ context.Context, now time.Time) ([]job.Job, error) { return codex.Discover(now) }},
+		{"hermes", func(_ context.Context, now time.Time) ([]job.Job, error) { return hermes.Discover(now) }},
 	}
 
 	var (
