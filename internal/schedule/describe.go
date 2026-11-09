@@ -62,6 +62,23 @@ func (c *Cron) describeClock() string {
 		}
 	}
 
+	if h.contiguous() {
+		hs, ms := h.values(), m.values()
+		first, last := hs[0], hs[len(hs)-1]
+		var freq string
+		switch n, ok := m.step(); {
+		case m.all():
+			freq = "every minute"
+		case ok:
+			freq = fmt.Sprintf("every %d minutes", n)
+		case m.count() == 1 && h.count() > 4:
+			freq = "hourly"
+		}
+		if freq != "" {
+			return fmt.Sprintf("%s from %02d:%02d to %02d:%02d", freq, first, ms[0], last, ms[len(ms)-1])
+		}
+	}
+
 	if m.count() == 1 && h.count() <= 4 {
 		minute := m.values()[0]
 		times := make([]string, 0, h.count())

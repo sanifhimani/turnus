@@ -48,6 +48,13 @@ func (f field) step() (int, bool) {
 	return n, true
 }
 
+// contiguous reports whether the field is a single unbroken range, such as
+// 9-17.
+func (f field) contiguous() bool {
+	vs := f.values()
+	return len(vs) > 1 && vs[len(vs)-1]-vs[0] == len(vs)-1
+}
+
 func span(lo, hi, step int) uint64 {
 	var b uint64
 	for v := lo; v <= hi; v += step {
