@@ -114,8 +114,8 @@ func TestUntil(t *testing.T) {
 		{30 * time.Hour, "in 1d"},
 	}
 	for _, tt := range tests {
-		if got := until(now.Add(tt.d), now); got != tt.want {
-			t.Errorf("until(%v) = %q, want %q", tt.d, got, tt.want)
+		if got := Until(now.Add(tt.d), now); got != tt.want {
+			t.Errorf("Until(%v) = %q, want %q", tt.d, got, tt.want)
 		}
 	}
 }
@@ -133,8 +133,8 @@ func TestTruncate(t *testing.T) {
 		{"hello", 0, ""},
 	}
 	for _, tt := range tests {
-		if got := truncate(tt.s, tt.n); got != tt.want {
-			t.Errorf("truncate(%q, %d) = %q, want %q", tt.s, tt.n, got, tt.want)
+		if got := Truncate(tt.s, tt.n); got != tt.want {
+			t.Errorf("Truncate(%q, %d) = %q, want %q", tt.s, tt.n, got, tt.want)
 		}
 	}
 }
