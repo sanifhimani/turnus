@@ -11,6 +11,9 @@ const (
 	Cron    Source = "cron"
 	Launchd Source = "launchd"
 	Systemd Source = "systemd"
+	Claude  Source = "claude"
+	Codex   Source = "codex"
+	Hermes  Source = "hermes"
 )
 
 // Scope says whether a job runs as the current user or system-wide.
@@ -89,9 +92,18 @@ type Job struct {
 	Expr     string    `json:"expr,omitempty"`
 	Next     time.Time `json:"next,omitzero"`
 
-	State    State `json:"state"`
-	PID      int   `json:"pid,omitempty"`
-	LastExit *int  `json:"last_exit,omitempty"`
+	State    State     `json:"state"`
+	PID      int       `json:"pid,omitempty"`
+	LastExit *int      `json:"last_exit,omitempty"`
+	LastRun  time.Time `json:"last_run,omitzero"`
+
+	// LastResult is how the scheduler describes the last run, for schedulers
+	// that don't record exit codes, such as "error" or "folder_missing".
+	LastResult string `json:"last_result,omitempty"`
+
+	// Host is the app or service that must be running for the job to fire,
+	// such as Claude Desktop. It is empty for jobs the OS runs.
+	Host string `json:"host,omitempty"`
 
 	File    string `json:"file"`
 	Line    int    `json:"line,omitempty"`
