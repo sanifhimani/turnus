@@ -251,6 +251,14 @@ func (c *Cron) Next(t time.Time) time.Time {
 	return time.Time{}
 }
 
+// Hours returns the hours the schedule runs in, or nil if it runs every hour.
+func (c *Cron) Hours() []int {
+	if c.Reboot || c.hour.all() {
+		return nil
+	}
+	return c.hour.values()
+}
+
 func (c *Cron) dayMatches(t time.Time) bool {
 	dom := c.dom.has(t.Day())
 	dow := c.dow.has(int(t.Weekday()))
