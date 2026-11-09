@@ -105,8 +105,12 @@ type Job struct {
 	// machine was off.
 	Persistent bool `json:"-"`
 
-	// Err is set when the job's definition could not be read.
+	// Err is set when the job's definition is invalid or could not be read.
 	Err string `json:"error,omitempty"`
+
+	// Unreadable is set when turnus lacks permission to read the job's file,
+	// so the jobs in it can't be shown.
+	Unreadable bool `json:"unreadable,omitempty"`
 
 	Problems []Problem `json:"problems,omitempty"`
 }
