@@ -26,13 +26,14 @@ not a valid line
 		{Line: 6, Expr: "*/15 9-17 * * 1-5", Command: "cd /srv/app && ./bin/sync   --fast"},
 		{Line: 7, Expr: "@reboot", Command: "/opt/start.sh"},
 		{Line: 9, Expr: "@daily", Command: `echo  "two  spaces"`},
+		{Line: 10, Command: "not a valid line", Err: "it needs a schedule and a command"},
 	}
 	if len(entries) != len(want) {
 		t.Fatalf("got %d entries, want %d: %+v", len(entries), len(want), entries)
 	}
 	for i, w := range want {
 		g := entries[i]
-		if g.Line != w.Line || g.Expr != w.Expr || g.Command != w.Command || g.User != "" {
+		if g.Line != w.Line || g.Expr != w.Expr || g.Command != w.Command || g.Err != w.Err || g.User != "" {
 			t.Errorf("entry %d = %+v, want %+v", i, g, w)
 		}
 	}
@@ -62,5 +63,17 @@ func TestParseSystem(t *testing.T) {
 	}
 	if e := entries[1]; e.Expr != "@weekly" || e.User != "backup" || e.Command != "/usr/bin/rotate" {
 		t.Errorf("entry 1 = %+v", e)
+	}
+}
+
+func TestParseMissingCommand(t *testing.T) {
+	entries, _ := Parse(strings.NewReader("* * * * *\n0 3 * * * root\n"), true)
+	if len(entries) != 2 {
+		t.Fatalf("got %d entries, want 2", len(entries))
+	}
+	for _, e := range entries {
+		if e.Err != "it needs a schedule, a user and a command" {
+			t.Errorf("line %d: err = %q", e.Line, e.Err)
+		}
 	}
 }

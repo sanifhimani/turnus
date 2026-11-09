@@ -15,6 +15,10 @@ type Entry struct {
 	User    string
 	Command string
 
+	// Err explains why cron can't read the line. The line is kept so it can
+	// be reported rather than silently dropped.
+	Err string
+
 	// Env holds the variables set above this line, such as MAILTO.
 	Env map[string]string
 }
@@ -40,10 +44,7 @@ func Parse(r io.Reader, system bool) ([]Entry, error) {
 			continue
 		}
 
-		e, ok := parseJob(line, system)
-		if !ok {
-			continue
-		}
+		e := parseJob(line, system)
 		e.Line = n
 		e.Env = env
 		entries = append(entries, e)
@@ -51,7 +52,7 @@ func Parse(r io.Reader, system bool) ([]Entry, error) {
 	return entries, sc.Err()
 }
 
-func parseJob(line string, system bool) (Entry, bool) {
+func parseJob(line string, system bool) Entry {
 	nfields := 5
 	if line[0] == '@' {
 		nfields = 1
@@ -62,7 +63,11 @@ func parseJob(line string, system bool) (Entry, bool) {
 
 	fields, rest := splitFields(line, nfields)
 	if len(fields) < nfields || rest == "" {
-		return Entry{}, false
+		need := "a schedule and a command"
+		if system {
+			need = "a schedule, a user and a command"
+		}
+		return Entry{Command: line, Err: "it needs " + need}
 	}
 
 	e := Entry{Command: rest}
@@ -71,7 +76,7 @@ func parseJob(line string, system bool) (Entry, bool) {
 		fields = fields[:len(fields)-1]
 	}
 	e.Expr = strings.Join(fields, " ")
-	return e, true
+	return e
 }
 
 // splitFields returns the first n whitespace-separated fields and the rest of
