@@ -206,6 +206,25 @@ func TestStatus(t *testing.T) {
 	}
 }
 
+func TestAgo(t *testing.T) {
+	now := time.Date(2026, 11, 9, 14, 0, 0, 0, time.Local)
+	tests := []struct {
+		d    time.Duration
+		want string
+	}{
+		{30 * time.Second, "just now"},
+		{12 * time.Minute, "12m ago"},
+		{5 * time.Hour, "5h ago"},
+		{3 * 24 * time.Hour, "3d ago"},
+		{20 * 24 * time.Hour, "Oct 20"},
+	}
+	for _, tt := range tests {
+		if got := ago(now.Add(-tt.d), now); got != tt.want {
+			t.Errorf("ago(%v) = %q, want %q", tt.d, got, tt.want)
+		}
+	}
+}
+
 func TestWhen(t *testing.T) {
 	now := time.Date(2026, 11, 8, 21, 0, 0, 0, time.Local) // a Sunday
 	tests := []struct {

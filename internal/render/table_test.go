@@ -171,3 +171,19 @@ func TestFitDropsColumns(t *testing.T) {
 		t.Errorf("without a width limit every column shows: %+v", w)
 	}
 }
+
+func TestLastResult(t *testing.T) {
+	tests := []struct {
+		j    job.Job
+		want string
+	}{
+		{job.Job{Source: job.Hermes, LastResult: "ok"}, "ok"},
+		{job.Job{Source: job.Hermes, LastResult: "error"}, "failed"},
+		{job.Job{Source: job.Claude, LastResult: "folder_missing"}, "skipped"},
+	}
+	for _, tt := range tests {
+		if got := NewRow(&tt.j, now).Last; got != tt.want {
+			t.Errorf("%s %q: last = %q, want %q", tt.j.Source, tt.j.LastResult, got, tt.want)
+		}
+	}
+}
