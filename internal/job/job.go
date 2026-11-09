@@ -77,8 +77,9 @@ type Job struct {
 	Kind    Kind   `json:"kind"`
 	Builtin bool   `json:"builtin"` // ships with the OS
 
-	Command string `json:"command"`
-	Program string `json:"program,omitempty"`
+	Command string            `json:"command"`
+	Program string            `json:"program,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
 
 	Schedule string    `json:"schedule"`
 	Expr     string    `json:"expr,omitempty"`

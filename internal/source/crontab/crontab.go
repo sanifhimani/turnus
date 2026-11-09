@@ -137,6 +137,7 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 		Kind:     job.Scheduled,
 		Command:  e.Command,
 		Program:  program,
+		Env:      e.Env,
 		Schedule: e.Expr,
 		Expr:     e.Expr,
 		State:    job.StateIdle,
