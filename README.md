@@ -103,3 +103,7 @@ cron keeps no history of past runs, so turnus can't tell you whether a cron
 job's last run succeeded.
 
 turnus runs on macOS and Linux.
+
+## License
+
+turnus is released under the [MIT License](LICENSE).
