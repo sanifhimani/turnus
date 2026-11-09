@@ -46,8 +46,11 @@ func (c *Cron) describeClock() string {
 	case m.all() && h.all():
 		return "every minute"
 	case h.all():
-		if n, ok := m.step(); ok {
-			return fmt.Sprintf("every %d minutes", n)
+		if n, start, ok := m.step(); ok {
+			if start == 0 {
+				return fmt.Sprintf("every %d minutes", n)
+			}
+			return fmt.Sprintf("every %d minutes from :%02d", n, start)
 		}
 		if m.count() == 1 {
 			v := m.values()[0]
@@ -56,9 +59,13 @@ func (c *Cron) describeClock() string {
 			}
 			return fmt.Sprintf("hourly at :%02d", v)
 		}
-	case m.count() == 1 && m.values()[0] == 0:
-		if n, ok := h.step(); ok {
-			return fmt.Sprintf("every %d hours", n)
+	case m.count() == 1:
+		if n, start, ok := h.step(); ok {
+			minute := m.values()[0]
+			if start == 0 && minute == 0 {
+				return fmt.Sprintf("every %d hours", n)
+			}
+			return fmt.Sprintf("every %d hours from %02d:%02d", n, start, minute)
 		}
 	}
 
@@ -66,7 +73,7 @@ func (c *Cron) describeClock() string {
 		hs, ms := h.values(), m.values()
 		first, last := hs[0], hs[len(hs)-1]
 		var freq string
-		switch n, ok := m.step(); {
+		switch n, _, ok := m.step(); {
 		case m.all():
 			freq = "every minute"
 		case ok:

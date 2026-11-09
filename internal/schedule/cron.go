@@ -34,18 +34,23 @@ func (f field) values() []int {
 	return out
 }
 
-// step reports whether the field is exactly min, min+n, min+2n, ... for some
-// n > 1, as written by "*/n".
-func (f field) step() (int, bool) {
+// step reports whether the field is start, start+n, start+2n, ... through
+// the end of its range for some n > 1, as written by "*/n" or "5/n". The
+// start is the first value and is always less than n.
+func (f field) step() (n, start int, ok bool) {
 	vs := f.values()
-	if len(vs) < 2 || vs[0] != f.min {
-		return 0, false
+	if len(vs) < 2 {
+		return 0, 0, false
 	}
-	n := vs[1] - vs[0]
-	if n < 2 || f.bits != span(f.min, f.max, n) {
-		return 0, false
+	start, n = vs[0], vs[1]-vs[0]
+	// Two values with an offset, like 8 and 17, read better as a list.
+	if start != f.min && len(vs) < 3 {
+		return 0, 0, false
 	}
-	return n, true
+	if n < 2 || start-f.min >= n || f.bits != span(start, f.max, n) {
+		return 0, 0, false
+	}
+	return n, start, true
 }
 
 // contiguous reports whether the field is a single unbroken range, such as
