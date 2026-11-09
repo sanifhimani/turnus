@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"time"
 
@@ -45,14 +46,19 @@ Usage:
 Flags:
   -a, --all      include jobs that ship with the OS
       --json     print jobs as JSON
+      --check    exit with status 1 if any job is failing
   -h, --help     show this help
   -v, --version  show the version
+
+Exit status is 0 on success, 1 when --check finds a failing job, and 2 on
+errors.
 `
 
 type options struct {
-	ls   bool
-	all  bool
-	json bool
+	ls    bool
+	all   bool
+	json  bool
+	check bool
 }
 
 func main() {
@@ -72,6 +78,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 			opts.all = true
 		case "--json":
 			opts.json = true
+		case "--check":
+			opts.check = true
 		case "-h", "--help", "help":
 			fmt.Fprint(stdout, usage)
 			return 0
@@ -82,7 +90,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return fail(stderr, "unknown argument %q", a)
 		}
 	}
-	if !opts.ls && !opts.json && interactive() {
+	if !opts.ls && !opts.json && !opts.check && interactive() {
 		return browse(opts, stderr)
 	}
 	return list(opts, stdout, stderr)
@@ -117,7 +125,7 @@ func browse(opts options, stderr io.Writer) int {
 	m := ui.New(reload, jobs, opts.all, style.For(os.Stdout))
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Fprintln(stderr, "turnus:", err)
-		return 1
+		return 2
 	}
 	return 0
 }
@@ -138,9 +146,17 @@ func list(opts options, stdout, stderr io.Writer) int {
 	}
 	if err != nil {
 		fmt.Fprintln(stderr, "turnus:", err)
+		return 2
+	}
+	if opts.check && failing(jobs) {
 		return 1
 	}
 	return 0
+}
+
+// failing reports whether any job has a failure. Warnings don't count.
+func failing(jobs []job.Job) bool {
+	return slices.ContainsFunc(jobs, func(j job.Job) bool { return j.Worst() == job.Fail })
 }
 
 func interactive() bool {

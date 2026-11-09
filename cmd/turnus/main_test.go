@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/sanifhimani/turnus/internal/job"
 )
 
 func TestRunArgs(t *testing.T) {
@@ -47,5 +49,16 @@ func TestRunJSON(t *testing.T) {
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil || out.Version != 1 || out.Jobs == nil {
 		t.Fatalf("unexpected output: %v\n%s", err, stdout.String())
+	}
+}
+
+func TestFailing(t *testing.T) {
+	warn := []job.Job{{Problems: []job.Problem{{Severity: job.Warn}}}, {}}
+	if failing(warn) || failing(nil) {
+		t.Error("warnings and empty lists should not count as failing")
+	}
+	fail := append(warn, job.Job{Problems: []job.Problem{{Severity: job.Fail}}})
+	if !failing(fail) {
+		t.Error("a job with a failure should count as failing")
 	}
 }
