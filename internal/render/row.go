@@ -202,25 +202,44 @@ func (w Widths) total(indent int) int {
 
 // Line draws a row. A bold row has its name in bold, for the selected row.
 func (r Row) Line(w Widths, s style.Style, bold bool) string {
-	name := Pad(Truncate(r.Name, w.Name), w.Name)
-	if bold {
-		name = s.Bold(name)
+	type cell struct {
+		text  string
+		width int
+		paint func(string) string
 	}
-	var b strings.Builder
-	b.WriteString(Paint(s, r.GlyphTone, r.Glyph))
-	b.WriteByte(' ')
-	b.WriteString(name)
-	b.WriteString(gap)
-	b.WriteString(s.Dim(Pad(Truncate(r.Schedule, w.Schedule), w.Schedule)))
-	b.WriteString(gap)
-	b.WriteString(Paint(s, r.WhenTone, Pad(r.When, w.When)))
+	name := func(t string) string { return t }
+	if bold {
+		name = s.Bold
+	}
+	tone := func(t Tone) func(string) string {
+		return func(text string) string { return Paint(s, t, text) }
+	}
+	cells := []cell{
+		{Truncate(r.Name, w.Name), w.Name, name},
+		{Truncate(r.Schedule, w.Schedule), w.Schedule, s.Dim},
+		{r.When, w.When, tone(r.WhenTone)},
+	}
 	if w.Last > 0 {
-		b.WriteString(gap)
-		b.WriteString(Paint(s, r.LastTone, Pad(r.Last, w.Last)))
+		cells = append(cells, cell{r.Last, w.Last, tone(r.LastTone)})
 	}
 	if w.Source > 0 {
-		b.WriteString(gap)
-		b.WriteString(s.Dim(r.Source))
+		cells = append(cells, cell{r.Source, w.Source, s.Dim})
+	}
+
+	var b strings.Builder
+	b.WriteString(Paint(s, r.GlyphTone, r.Glyph))
+	for i, c := range cells {
+		text := c.text
+		// The last column is not padded, so lines never end in spaces.
+		if i < len(cells)-1 {
+			text = Pad(text, c.width)
+		}
+		if i == 0 {
+			b.WriteByte(' ')
+		} else {
+			b.WriteString(gap)
+		}
+		b.WriteString(c.paint(text))
 	}
 	return b.String()
 }

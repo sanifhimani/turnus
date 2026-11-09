@@ -88,6 +88,11 @@ func TestTableFitsWidth(t *testing.T) {
 	if !strings.Contains(out, "…") {
 		t.Errorf("long names should be truncated:\n%s", out)
 	}
+	for line := range strings.SplitSeq(render(t, sample(), 50), "\n") {
+		if strings.HasSuffix(line, " ") {
+			t.Errorf("line has trailing spaces: %q", line)
+		}
+	}
 }
 
 func TestTableEmpty(t *testing.T) {
