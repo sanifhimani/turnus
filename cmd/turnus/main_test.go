@@ -18,7 +18,7 @@ func TestRunArgs(t *testing.T) {
 		{args: []string{"-h"}, code: 0, stdout: "Usage:"},
 		{args: []string{"--version"}, code: 0, stdout: "turnus dev"},
 		{args: []string{"--nope"}, code: 2, stderr: `unknown argument "--nope"`},
-		{args: []string{"-a", "ls"}, code: 2, stderr: `unexpected argument "ls"`},
+		{args: []string{"ls", "ls"}, code: 2, stderr: `unexpected argument "ls"`},
 	}
 	for _, tt := range tests {
 		var stdout, stderr bytes.Buffer
@@ -37,7 +37,8 @@ func TestRunArgs(t *testing.T) {
 
 func TestRunJSON(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"ls", "--json"}, &stdout, &stderr); code != 0 {
+	// Flags may come before or after the command.
+	if code := run([]string{"--json", "-a", "ls"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	var jobs []map[string]any

@@ -61,10 +61,10 @@ func main() {
 
 func run(args []string, stdout, stderr io.Writer) int {
 	var opts options
-	for i, a := range args {
+	for _, a := range args {
 		switch a {
 		case "ls":
-			if i != 0 {
+			if opts.ls {
 				return fail(stderr, "unexpected argument %q", a)
 			}
 			opts.ls = true
