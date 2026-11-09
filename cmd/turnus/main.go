@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -20,8 +22,19 @@ import (
 	"github.com/sanifhimani/turnus/internal/ui"
 )
 
-// version is set at build time.
+// version is set by release builds. Builds from go install fall back to the
+// module version Go records in the binary.
 var version = "dev"
+
+func versionString() string {
+	if version != "dev" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return version
+}
 
 const usage = `turnus shows every scheduled job on this machine and what is wrong with it.
 
@@ -63,7 +76,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprint(stdout, usage)
 			return 0
 		case "-v", "--version", "version":
-			fmt.Fprintln(stdout, "turnus", version)
+			fmt.Fprintln(stdout, "turnus", versionString())
 			return 0
 		default:
 			return fail(stderr, "unknown argument %q", a)
