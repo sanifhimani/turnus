@@ -39,12 +39,16 @@ func Local() Env {
 
 type checker func(*job.Job, Env) *job.Problem
 
+// Order matters: lastRun stays quiet about exit 78 when an earlier check has
+// already explained it.
 var checkers = []checker{
 	invalidDefinition,
 	noProgram,
 	programMissing,
 	notExecutable,
 	logDirMissing,
+	lastRun,
+	unloaded,
 }
 
 // Run records each job's problems, worst first. Jobs that ship with the OS
