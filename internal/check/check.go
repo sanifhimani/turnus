@@ -52,6 +52,8 @@ var checkers = []checker{
 	neverRuns,
 	missedWhileAsleep,
 	daylightSaving,
+	protectedFolder,
+	output,
 }
 
 // Run records each job's problems, worst first. Jobs that ship with the OS
