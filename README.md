@@ -3,10 +3,12 @@
 turnus is a terminal UI for the cron jobs, launchd agents and systemd timers on
 your machine.
 
-It lists every job in one place and flags the ones that are broken. It tells
-you when a job's last run failed or crashed, when its program no longer exists,
-when its plist never loaded, and when its schedule can never run. For each
-problem, turnus explains how to fix it, usually with a command you can copy.
+It also reads the tasks you schedule in Claude Desktop, the Codex app and the
+Hermes agent. It lists every job in one place and flags the ones that are
+broken. It tells you when a job's last run failed or crashed, when its program
+no longer exists, when its plist never loaded, and when its schedule can never
+run. For each problem, turnus explains how to fix it, usually with a command you
+can copy.
 
 turnus only reads your jobs. It never changes them, and it doesn't run in the
 background.
@@ -78,6 +80,12 @@ turnus runs these checks on every job.
 | The job reads `~/Documents`, which cron can't do without Full Disk Access | macOS | | |
 | The job's output goes nowhere | ✓ | | |
 
+For tasks that AI agents schedule, turnus flags a Claude Desktop task that the
+app skipped and says why, such as a folder that no longer exists or a signed-out
+account. It flags a Hermes job whose last run failed. It also points out that
+these tasks run only while the app or service that schedules them is running,
+and it warns you when Claude Desktop is closed.
+
 launchd returns exit code 78 for both a missing program and a missing log
 folder, and systemd returns 203 for any program it can't start. turnus checks
 the files to tell you which problem caused the failure.
@@ -89,6 +97,12 @@ turnus reads cron jobs from your crontab, `/etc/crontab`, `/etc/cron.d` and the
 the LaunchAgents and LaunchDaemons folders and gets their status from
 `launchctl print`. It reads systemd timers for both the system and your user
 and gets their status from `systemctl show`.
+
+turnus reads Claude Desktop's scheduled tasks from its folder in
+`~/Library/Application Support/Claude`, Codex automations from
+`~/.codex/automations`, and Hermes jobs from `~/.hermes/cron/jobs.json`. Claude
+Desktop and Codex don't document these files, so turnus reads them carefully and
+tells you when it finds a format it doesn't know.
 
 cron keeps no history of past runs, so turnus can't tell you whether a cron
 job's last run succeeded.
