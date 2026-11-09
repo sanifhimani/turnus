@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -25,8 +26,9 @@ var periodic = []struct{ dir, expr, schedule string }{
 }
 
 // Discover returns jobs from the current user's crontab and the system
-// crontabs. Missing files are not errors.
-func Discover(ctx context.Context, now time.Time) ([]job.Job, error) {
+// crontabs. Missing files are not errors. Jobs installed by OS packages are
+// included only when builtin is true.
+func Discover(ctx context.Context, now time.Time, builtin bool) ([]job.Job, error) {
 	var jobs []job.Job
 
 	userJobs, err := discoverUser(ctx, now)
@@ -48,6 +50,11 @@ func Discover(ctx context.Context, now time.Time) ([]job.Job, error) {
 
 	for _, p := range periodic {
 		jobs = append(jobs, discoverPeriodic(p.dir, p.expr, p.schedule, now)...)
+	}
+
+	markBuiltin(jobs, packageFiles(dpkgStatus))
+	if !builtin {
+		jobs = slices.DeleteFunc(jobs, func(j job.Job) bool { return j.Builtin })
 	}
 	return jobs, nil
 }

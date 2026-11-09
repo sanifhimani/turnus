@@ -31,7 +31,9 @@ type source struct {
 func Discover(ctx context.Context, opts Options) ([]job.Job, []error) {
 	now := time.Now()
 	sources := []source{
-		{"cron", crontab.Discover},
+		{"cron", func(ctx context.Context, now time.Time) ([]job.Job, error) {
+			return crontab.Discover(ctx, now, opts.Builtin)
+		}},
 		{"launchd", func(ctx context.Context, now time.Time) ([]job.Job, error) {
 			return launchd.Discover(ctx, now, opts.Builtin)
 		}},
