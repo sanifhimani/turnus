@@ -59,12 +59,12 @@ type Problem struct {
 
 // Job is one scheduled or managed command on this machine.
 type Job struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Source   Source `json:"source"`
-	Scope    Scope  `json:"scope"`
-	Kind     Kind   `json:"kind"`
-	Vendored bool   `json:"vendored"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Source  Source `json:"source"`
+	Scope   Scope  `json:"scope"`
+	Kind    Kind   `json:"kind"`
+	Builtin bool   `json:"builtin"` // ships with the OS
 
 	Command string `json:"command"`
 	Program string `json:"program,omitempty"`
