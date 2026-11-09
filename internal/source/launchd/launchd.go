@@ -117,6 +117,7 @@ func readJob(path string, loc location, now time.Time) job.Job {
 	s, err := readSpec(path)
 	if err != nil {
 		j.Schedule = "unreadable"
+		j.Err = err.Error()
 		return j
 	}
 	if s.Label != "" {

@@ -97,6 +97,9 @@ type Job struct {
 	Line    int    `json:"line,omitempty"`
 	LogPath string `json:"log,omitempty"`
 
+	// Err is set when the job's definition could not be read.
+	Err string `json:"error,omitempty"`
+
 	Problems []Problem `json:"problems,omitempty"`
 }
 
