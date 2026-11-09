@@ -1,0 +1,13 @@
+version = 1
+id = "standup"
+kind = "cron"
+name = "Standup notes"
+prompt = "Summarize yesterday's commits for standup"
+status = "ACTIVE"
+rrule = "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9;BYMINUTE=0"
+model = "gpt-5.5"
+reasoning_effort = "medium"
+execution_environment = "local"
+cwds = ["/Users/me/work/app"]
+created_at = 1793000000000
+updated_at = 1793000000000

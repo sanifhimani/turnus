@@ -1,0 +1,8 @@
+version = 1
+id = "cloud"
+kind = "cron"
+name = "Team report"
+prompt = "Write the team report"
+status = "ACTIVE"
+rrule = "FREQ=WEEKLY;BYDAY=FR;BYHOUR=16;BYMINUTE=0"
+execution_environment = "cloud"

@@ -1,0 +1,8 @@
+version = 1
+id = "paused"
+kind = "cron"
+name = "Dependency check"
+prompt = "Look for outdated dependencies"
+status = "PAUSED"
+rrule = "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;BYHOUR=10"
+execution_environment = "local"
