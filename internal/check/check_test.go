@@ -156,6 +156,47 @@ func TestRun(t *testing.T) {
 			want: []string{"protected-folder", "output"},
 		},
 		{
+			name: "timer starts a missing service",
+			job:  job.Job{Source: job.Systemd, Kind: job.Scheduled, Unit: "x.service", Err: "missing", State: job.StateUnloaded},
+			want: []string{"missing-unit"},
+		},
+		{
+			name: "program missing explains exit 203",
+			job: job.Job{Source: job.Systemd, Kind: job.Scheduled, Command: "/nope", Program: "/nope",
+				Unit: "x.service", State: job.StateIdle, LastExit: exit(203), Persistent: true},
+			want: []string{"program-missing"},
+		},
+		{
+			name: "timer enabled but not started",
+			job: job.Job{Source: job.Systemd, Kind: job.Scheduled, Name: "x", Command: "/usr/bin/true",
+				Program: "/usr/bin/true", State: job.StateUnloaded},
+			want: []string{"unloaded"},
+		},
+		{
+			name: "daily timer without Persistent",
+			job: job.Job{Source: job.Systemd, Kind: job.Scheduled, Command: "/usr/bin/true", Program: "/usr/bin/true",
+				Expr: "*-*-* 04:00:00", State: job.StateIdle},
+			want: []string{"missed-while-off"},
+		},
+		{
+			name: "persistent timer at 2:30",
+			job: job.Job{Source: job.Systemd, Kind: job.Scheduled, Command: "/usr/bin/true", Program: "/usr/bin/true",
+				Expr: "*-*-* 02:30:00", State: job.StateIdle, Persistent: true},
+			want: []string{"daylight-saving"},
+		},
+		{
+			name: "timer that never runs",
+			job: job.Job{Source: job.Systemd, Kind: job.Scheduled, Command: "/usr/bin/true", Program: "/usr/bin/true",
+				Expr: "*-02-30 00:00:00", State: job.StateIdle, Persistent: true},
+			want: []string{"never-runs"},
+		},
+		{
+			name: "scripts in cron.daily follow run-parts",
+			job: job.Job{Source: job.Cron, Kind: job.Scheduled, Command: "/etc/cron.daily/x", Program: "/usr/bin/true",
+				File: "/etc/cron.daily/x", Expr: "@daily"},
+			want: []string{"missed-while-asleep"},
+		},
+		{
 			name: "builtin jobs are skipped",
 			job:  job.Job{Source: job.Launchd, Builtin: true, State: job.StateUnloaded},
 			want: nil,
@@ -196,6 +237,11 @@ func TestOutput(t *testing.T) {
 		{"/bin/x", map[string]string{"MAILTO": "me@example.com"}, ""},
 		{"/bin/x > /dev/null 2>&1", nil, "Output is thrown away, so errors leave no trace"},
 		{"/bin/x 2>/dev/null", nil, "Output goes to local mail, which few people read"},
+	}
+	noMail := testEnv(nil)
+	noMail.HasMail = func() bool { return false }
+	if p := output(&job.Job{Source: job.Cron, Command: "/bin/x"}, noMail); p == nil || p.Summary != "Output is discarded because no mail server is installed" {
+		t.Errorf("without mail: %+v", p)
 	}
 	for _, tt := range tests {
 		j := &job.Job{Source: job.Cron, Name: "x", Command: tt.cmd, Env: tt.env}
