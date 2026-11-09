@@ -150,6 +150,8 @@ func (m *model) key(k string) tea.Cmd {
 		return tea.Batch(m.reload(), m.flash(msg))
 	case "r":
 		return tea.Batch(m.reload(), m.flash("Refreshed"))
+	default:
+		return m.action(k)
 	}
 	return nil
 }
@@ -162,6 +164,8 @@ func (m *model) detailKey(k string) tea.Cmd {
 		m.detailOffset = max(m.detailOffset-1, 0)
 	case "down", "j":
 		m.detailOffset++
+	default:
+		return m.action(k)
 	}
 	return nil
 }
@@ -457,11 +461,11 @@ func (m *model) footer() string {
 	case m.status != "":
 		return " " + s.Cyan(m.status)
 	case m.detail:
-		return " " + s.Dim(keys("esc back", "q back"))
+		return " " + s.Dim(keys("esc back", "e edit", "l log", "c copy fix", "q back"))
 	}
-	hint := keys("↑↓ move", "/ filter", "enter details", "a all", "q quit")
+	hint := keys("↑↓ move", "/ filter", "enter details", "e edit", "l log", "c copy fix", "a all", "q quit")
 	if m.filter != "" {
-		hint = keys("↑↓ move", "esc clear filter", "enter details", "q quit")
+		hint = keys("↑↓ move", "esc clear filter", "enter details", "e edit", "l log", "c copy fix", "q quit")
 	}
 	return " " + s.Dim(render.Truncate(hint, m.width-1))
 }
