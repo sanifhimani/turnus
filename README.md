@@ -11,25 +11,7 @@ problem, turnus explains how to fix it, usually with a command you can copy.
 turnus only reads your jobs. It never changes them, and it doesn't run in the
 background.
 
-```
-$ turnus ls
-Scheduled 5
-✕ backup.sh                      daily at 03:30     in 5h       –        cron
-  Program not found: ~/bin/backup.sh
-✕ com.example.photo-sync         every 15 minutes   in 4m       crashed  launchd
-  Crashed on its last run: segmentation fault (SIGSEGV)
-▲ com.google.GoogleUpdater.wake  hourly             not loaded  –        launchd
-  Not loaded, so it never runs
-● dotfiles-sync                  every 30 minutes   in 21m      ok       launchd
-● report.py                      weekdays at 09:00  in 11h      –        cron
-
-Services 2
-✕ homebrew.mxcl.colima           always running     stopped     exit 1   launchd
-  Last run failed with exit code 1
-● homebrew.mxcl.postgresql@17    always running     running     –        launchd
-
-7 jobs · 3 failing · 1 warning
-```
+![turnus listing failing jobs, opening one, and reading its journal](assets/demo.gif)
 
 ## Install
 
