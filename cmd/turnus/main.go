@@ -9,12 +9,15 @@ import (
 	"os"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"golang.org/x/term"
 
 	"github.com/sanifhimani/turnus/internal/check"
 	"github.com/sanifhimani/turnus/internal/discover"
+	"github.com/sanifhimani/turnus/internal/job"
 	"github.com/sanifhimani/turnus/internal/render"
 	"github.com/sanifhimani/turnus/internal/style"
+	"github.com/sanifhimani/turnus/internal/ui"
 )
 
 // version is set at build time.
@@ -23,7 +26,8 @@ var version = "dev"
 const usage = `turnus shows every scheduled job on this machine and what is wrong with it.
 
 Usage:
-  turnus [ls] [flags]
+  turnus [flags]       browse jobs interactively
+  turnus ls [flags]    print jobs as a table
 
 Flags:
   -a, --all      include jobs that ship with the OS
@@ -33,6 +37,7 @@ Flags:
 `
 
 type options struct {
+	ls   bool
 	all  bool
 	json bool
 }
@@ -49,6 +54,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			if i != 0 {
 				return fail(stderr, "unexpected argument %q", a)
 			}
+			opts.ls = true
 		case "-a", "--all":
 			opts.all = true
 		case "--json":
@@ -63,18 +69,43 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return fail(stderr, "unknown argument %q", a)
 		}
 	}
+	if !opts.ls && !opts.json && interactive() {
+		return browse(opts, stderr)
+	}
 	return list(opts, stdout, stderr)
 }
 
-func list(opts options, stdout, stderr io.Writer) int {
+// load finds and checks jobs. Errors from a source are reported to errw,
+// and the jobs from the other sources are still returned.
+func load(all bool, errw io.Writer) []job.Job {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	jobs, errs := discover.Discover(ctx, discover.Options{Builtin: opts.all})
+	jobs, errs := discover.Discover(ctx, discover.Options{Builtin: all})
 	check.Run(jobs, check.Local())
-	for _, err := range errs {
-		fmt.Fprintln(stderr, "turnus:", err)
+	if errw != nil {
+		for _, err := range errs {
+			fmt.Fprintln(errw, "turnus:", err)
+		}
 	}
+	return jobs
+}
+
+func browse(opts options, stderr io.Writer) int {
+	jobs := load(opts.all, stderr)
+	// Errors are printed once, before the screen is taken over.
+	reload := func(all bool) []job.Job { return load(all, nil) }
+
+	m := ui.New(reload, jobs, opts.all, style.For(os.Stdout))
+	if _, err := tea.NewProgram(m).Run(); err != nil {
+		fmt.Fprintln(stderr, "turnus:", err)
+		return 1
+	}
+	return 0
+}
+
+func list(opts options, stdout, stderr io.Writer) int {
+	jobs := load(opts.all, stderr)
 
 	var err error
 	if opts.json {
@@ -91,6 +122,10 @@ func list(opts options, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+func interactive() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 func termWidth() int {
