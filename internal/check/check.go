@@ -49,6 +49,9 @@ var checkers = []checker{
 	logDirMissing,
 	lastRun,
 	unloaded,
+	neverRuns,
+	missedWhileAsleep,
+	daylightSaving,
 }
 
 // Run records each job's problems, worst first. Jobs that ship with the OS
