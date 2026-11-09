@@ -19,6 +19,9 @@ func TestCommandName(t *testing.T) {
 		{"curl -fsS https://example.com/ping", "curl", "", false},
 		{`"/Users/me/Library/Application Support/x/run.sh" --now`, "run.sh", "/Users/me/Library/Application Support/x/run.sh", false},
 		{`/opt/My\ Scripts/sync.sh`, "sync.sh", "/opt/My Scripts/sync.sh", false},
+		{"test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.daily; }", "cron.daily", "", false},
+		{"cd / && run-parts --report /etc/cron.hourly", "cron.hourly", "", false},
+		{"[ -x /usr/bin/thing ] && /usr/bin/thing --go", "thing", "/usr/bin/thing", false},
 	}
 	for _, tt := range tests {
 		name, program, interpreted := commandName(tt.cmd)
