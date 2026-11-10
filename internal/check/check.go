@@ -96,6 +96,7 @@ var checkers = []checker{
 	output,
 	percent,
 	skippedByRunParts,
+	agentSchedule,
 	lastResult,
 	hostRequired,
 }

@@ -53,6 +53,17 @@ func TestAgentChecks(t *testing.T) {
 			want: []string{"needs-host"},
 		},
 		{
+			name:   "claude task with an invalid schedule",
+			job:    job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Host: "Claude Desktop", Expr: "0 9 * * 8"},
+			claude: true,
+			want:   []string{"invalid-schedule"},
+		},
+		{
+			name: "hermes job with an invalid schedule",
+			job:  job.Job{Source: job.Hermes, Kind: job.Scheduled, State: job.StateIdle, Host: "the Hermes gateway", Expr: "every tuesday"},
+			want: []string{"invalid-schedule", "needs-host"},
+		},
+		{
 			name: "agent store in an unknown format",
 			job:  job.Job{Source: job.Codex, Kind: job.Scheduled, Err: "its format isn't one turnus knows"},
 			want: []string{"unknown-format"},

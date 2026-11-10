@@ -1,6 +1,9 @@
 package check
 
-import "github.com/sanifhimani/turnus/internal/job"
+import (
+	"github.com/sanifhimani/turnus/internal/job"
+	"github.com/sanifhimani/turnus/internal/schedule"
+)
 
 // claudeSkips explains why Claude Desktop skipped a run, and how to fix it.
 // The reasons are the values the app records in recordedSkips.
@@ -16,6 +19,36 @@ var claudeSkips = map[string]struct{ why, fix string }{
 	"global_limit":          {"you reached your usage limit", "Check your plan's usage in Claude Desktop"},
 	"not_available":         {"scheduled tasks weren't available", "Update Claude Desktop"},
 	"not_run_before_update": {"Claude Desktop was updating", "No action needed if the next run works"},
+}
+
+// agentSchedule flags a Claude or Hermes task whose cron expression doesn't
+// parse. Neither app can run it, and without a next run nothing else about
+// the task would look wrong.
+func agentSchedule(j *job.Job, env Env) *job.Problem {
+	if j.Err != "" || j.Expr == "" || j.State == job.StateDisabled {
+		return nil
+	}
+	if j.Source != job.Claude && j.Source != job.Hermes {
+		return nil
+	}
+	_, err := schedule.ParseCron(j.Expr)
+	if err == nil {
+		return nil
+	}
+	if j.Source == job.Claude {
+		return &job.Problem{
+			Code:     "invalid-schedule",
+			Severity: job.Fail,
+			Summary:  "Claude Desktop can't run this task because its schedule is invalid (" + err.Error() + ")",
+			Fix:      "Edit the task's schedule in Claude Desktop",
+		}
+	}
+	return &job.Problem{
+		Code:     "invalid-schedule",
+		Severity: job.Fail,
+		Summary:  "Hermes can't run this job because its schedule is invalid (" + err.Error() + ")",
+		Fix:      "Fix the job's schedule in Hermes",
+	}
 }
 
 // lastResult reports runs that an agent scheduler recorded as skipped or
