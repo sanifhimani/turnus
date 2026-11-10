@@ -4,11 +4,11 @@ turnus is a terminal UI for the cron jobs, launchd agents and systemd timers on
 your machine.
 
 It also reads the tasks you schedule in Claude Desktop, the ChatGPT desktop app
-and the Hermes agent. It lists every job in one place and flags the ones that
-are broken. It tells you when a job's last run failed or crashed, when its
-program no longer exists, when its plist never loaded, and when its schedule can
-never run. For each problem, turnus explains how to fix it, usually with a
-command you can copy.
+(Codex automations) and the Hermes agent. It lists every job in one place and
+flags the ones that are broken. It tells you when a job's last run failed or
+crashed, when its program no longer exists, when its plist never loaded, and
+when its schedule can never run. For each problem, turnus explains how to fix
+it, usually with a command you can copy.
 
 turnus only reads your jobs. It never changes them, and it doesn't run in the
 background.
@@ -22,6 +22,9 @@ Install turnus with Homebrew.
 ```sh
 brew install sanifhimani/tap/turnus
 ```
+
+If brew says the cask is invalid, run `brew update` and try again. turnus needs
+a current version of Homebrew.
 
 You can also install it with Go 1.26 or later.
 
