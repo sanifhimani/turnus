@@ -148,7 +148,19 @@ func list(opts options, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "turnus:", err)
 		return 2
 	}
-	if opts.check && failing(jobs) {
+	return status(opts.check, jobs, errs)
+}
+
+// status is the exit status of a listing. With --check, a scheduler turnus
+// couldn't read is an error: the jobs it would have listed are unknown, so
+// the run can't vouch that nothing is failing.
+func status(check bool, jobs []job.Job, errs []error) int {
+	switch {
+	case !check:
+		return 0
+	case len(errs) > 0:
+		return 2
+	case failing(jobs):
 		return 1
 	}
 	return 0

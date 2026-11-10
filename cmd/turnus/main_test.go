@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -60,5 +61,29 @@ func TestFailing(t *testing.T) {
 	fail := append(warn, job.Job{Problems: []job.Problem{{Severity: job.Fail}}})
 	if !failing(fail) {
 		t.Error("a job with a failure should count as failing")
+	}
+}
+
+func TestStatus(t *testing.T) {
+	ok := []job.Job{{}}
+	bad := []job.Job{{Problems: []job.Problem{{Severity: job.Fail}}}}
+	broken := []error{errors.New("systemd: systemctl failed")}
+	tests := []struct {
+		name  string
+		check bool
+		jobs  []job.Job
+		errs  []error
+		want  int
+	}{
+		{"healthy", true, ok, nil, 0},
+		{"failing job", true, bad, nil, 1},
+		{"unreadable scheduler", true, ok, broken, 2},
+		{"unreadable scheduler beats a failing job", true, bad, broken, 2},
+		{"without check", false, bad, broken, 0},
+	}
+	for _, tt := range tests {
+		if got := status(tt.check, tt.jobs, tt.errs); got != tt.want {
+			t.Errorf("%s: status = %d, want %d", tt.name, got, tt.want)
+		}
 	}
 }
