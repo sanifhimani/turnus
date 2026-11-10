@@ -3,12 +3,12 @@
 turnus is a terminal UI for the cron jobs, launchd agents and systemd timers on
 your machine.
 
-It also reads the tasks you schedule in Claude Desktop, the Codex app and the
-Hermes agent. It lists every job in one place and flags the ones that are
-broken. It tells you when a job's last run failed or crashed, when its program
-no longer exists, when its plist never loaded, and when its schedule can never
-run. For each problem, turnus explains how to fix it, usually with a command you
-can copy.
+It also reads the tasks you schedule in Claude Desktop, the ChatGPT desktop app
+and the Hermes agent. It lists every job in one place and flags the ones that
+are broken. It tells you when a job's last run failed or crashed, when its
+program no longer exists, when its plist never loaded, and when its schedule can
+never run. For each problem, turnus explains how to fix it, usually with a
+command you can copy.
 
 turnus only reads your jobs. It never changes them, and it doesn't run in the
 background.
@@ -64,7 +64,7 @@ The browser uses these keys.
 
 ## Checks
 
-turnus runs these checks on every job.
+turnus runs these checks on every cron, launchd and systemd job.
 
 | Check | cron | launchd | systemd |
 |---|:-:|:-:|:-:|
@@ -73,18 +73,25 @@ turnus runs these checks on every job.
 | The log folder is missing, so the job can't start | ✓ | ✓ | |
 | The job isn't loaded or the timer isn't started | | ✓ | ✓ |
 | The timer starts a service that doesn't exist | | | ✓ |
-| The plist is invalid | | ✓ | |
+| The crontab line or the plist is invalid | ✓ | ✓ | |
+| turnus can't read the file, usually for lack of permission | ✓ | ✓ | |
 | The schedule never matches a real date | ✓ | ✓ | ✓ |
+| The command has an unescaped `%`, which cron treats as the end of the command | ✓ | | |
+| `run-parts` skips the script because of the characters in its name | Debian and Ubuntu | | |
 | The job runs between 1 and 3 a.m., when daylight saving can skip it | ✓ | ✓ | ✓ |
 | The scheduler skips runs missed while the machine sleeps or is off | macOS | `StartInterval` | Without `Persistent=true` |
 | The job reads `~/Documents`, which cron can't do without Full Disk Access | macOS | | |
 | The job's output goes nowhere | ✓ | | |
 
-For tasks that AI agents schedule, turnus flags a Claude Desktop task that the
-app skipped and says why, such as a folder that no longer exists or a signed-out
-account. It flags a Hermes job whose last run failed. It also points out that
-these tasks run only while the app or service that schedules them is running,
-and it warns you when Claude Desktop is closed.
+turnus runs these checks on the tasks that AI agents schedule.
+
+| Check | Claude Desktop | ChatGPT desktop app | Hermes |
+|---|:-:|:-:|:-:|
+| The app skipped the last run, with the reason it gives | ✓ | | |
+| The last run failed | | | ✓ |
+| The schedule is invalid | ✓ | | ✓ |
+| The task runs only while its app or service is running | ✓ | ✓ | ✓ |
+| The app is closed, so the task won't run | ✓ | | |
 
 launchd returns exit code 78 for both a missing program and a missing log
 folder, and systemd returns 203 for any program it can't start. turnus checks
@@ -99,10 +106,11 @@ the LaunchAgents and LaunchDaemons folders and gets their status from
 and gets their status from `systemctl show`.
 
 turnus reads Claude Desktop's scheduled tasks from its folder in
-`~/Library/Application Support/Claude`, Codex automations from
-`~/.codex/automations`, and Hermes jobs from `~/.hermes/cron/jobs.json`. Claude
-Desktop and Codex don't document these files, so turnus reads them carefully and
-tells you when it finds a format it doesn't know.
+`~/Library/Application Support/Claude`, the ChatGPT desktop app's scheduled
+tasks from `~/.codex/automations`, and Hermes jobs from
+`~/.hermes/cron/jobs.json`. Claude Desktop and ChatGPT don't document these
+files, so turnus reads them carefully and tells you when it finds a format it
+doesn't know.
 
 cron keeps no history of past runs, so turnus can't tell you whether a cron
 job's last run succeeded.
