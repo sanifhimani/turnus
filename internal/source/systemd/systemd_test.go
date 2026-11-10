@@ -154,3 +154,13 @@ func TestVendor(t *testing.T) {
 		t.Error("admin and user units are not vendor units")
 	}
 }
+
+func TestBooted(t *testing.T) {
+	dir := t.TempDir()
+	if !booted(dir) {
+		t.Error("an existing marker folder means systemd is running")
+	}
+	if booted(dir + "/missing") {
+		t.Error("a missing marker means systemd isn't running")
+	}
+}
