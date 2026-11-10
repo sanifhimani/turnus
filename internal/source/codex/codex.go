@@ -1,7 +1,7 @@
-// Package codex finds automations scheduled in the Codex app. The app keeps
-// each one in ~/.codex/automations/<id>/automation.toml and runs local ones
-// only while it is open. The format is not documented, so fields are read
-// leniently.
+// Package codex finds the scheduled tasks Codex runs in the ChatGPT desktop
+// app. The app keeps each one in ~/.codex/automations/<id>/automation.toml
+// and runs local ones only while it is open. The format is not documented,
+// so fields are read leniently.
 package codex
 
 import (
@@ -18,8 +18,8 @@ import (
 	"github.com/sanifhimani/turnus/internal/source"
 )
 
-// Host is what must be running for Codex automations to fire.
-const Host = "the ChatGPT app"
+// Host is what must be running for Codex scheduled tasks to fire.
+const Host = "the ChatGPT desktop app"
 
 type automation struct {
 	ID          string `toml:"id"`
@@ -30,8 +30,8 @@ type automation struct {
 	Environment string `toml:"execution_environment"`
 }
 
-// Discover returns local automations. CODEX_HOME moves them from ~/.codex.
-// Automations that run in the cloud are left out.
+// Discover returns local scheduled tasks. CODEX_HOME moves them from
+// ~/.codex. Tasks that run in the cloud are left out.
 func Discover(now time.Time) ([]job.Job, error) {
 	dir := os.Getenv("CODEX_HOME")
 	if dir == "" {

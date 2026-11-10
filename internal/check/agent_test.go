@@ -48,8 +48,8 @@ func TestAgentChecks(t *testing.T) {
 			want: []string{"undelivered", "needs-host"},
 		},
 		{
-			name: "codex automation",
-			job:  job.Job{Source: job.Codex, Kind: job.Scheduled, State: job.StateIdle, Host: "the ChatGPT app", Next: next},
+			name: "codex scheduled task",
+			job:  job.Job{Source: job.Codex, Kind: job.Scheduled, State: job.StateIdle, Host: "the ChatGPT desktop app", Next: next},
 			want: []string{"needs-host"},
 		},
 		{
