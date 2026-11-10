@@ -35,7 +35,7 @@ func Discover(ctx context.Context, now time.Time, builtin bool) ([]job.Job, erro
 	if runtime.GOOS != "linux" {
 		return nil, nil
 	}
-	if _, err := exec.LookPath("systemctl"); err != nil {
+	if _, err := exec.LookPath("systemctl"); err != nil || !booted(bootMarker) {
 		return nil, nil
 	}
 
@@ -114,6 +114,18 @@ func discoverScope(ctx context.Context, scope job.Scope, builtin bool) ([]job.Jo
 		jobs = append(jobs, j)
 	}
 	return jobs, nil
+}
+
+// bootMarker exists only when systemd is the running init system. Containers,
+// WSL without systemd, and CI runners often have systemctl installed without
+// systemd running.
+const bootMarker = "/run/systemd/system"
+
+// booted reports whether systemd is running, the same way systemd's own
+// sd_booted() does.
+func booted(marker string) bool {
+	fi, err := os.Stat(marker)
+	return err == nil && fi.IsDir()
 }
 
 // unitDirs are the folders systemd loads unit files from, as listed in
