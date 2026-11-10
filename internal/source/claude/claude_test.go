@@ -48,6 +48,15 @@ func TestRead(t *testing.T) {
 	}
 }
 
+// empty-from-app.json is a real file written by Claude Desktop 4.23118.0,
+// copied as is. If an update changes the format, this is where it shows.
+func TestReadFileFromApp(t *testing.T) {
+	jobs := read("testdata/empty-from-app.json", now)
+	if len(jobs) != 0 {
+		t.Errorf("a store with no tasks should give no jobs, got %+v", jobs)
+	}
+}
+
 func TestReadEmptyAndBroken(t *testing.T) {
 	dir := t.TempDir()
 	empty := filepath.Join(dir, "empty.json")
