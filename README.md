@@ -75,6 +75,7 @@ turnus runs these checks on every cron, launchd and systemd job.
 | The program is missing or not executable | ✓ | ✓ | ✓ |
 | The program isn't in the PATH the scheduler gives the job, though it's in yours | ✓ | ✓ | |
 | The log folder is missing, so the job can't start | ✓ | ✓ | |
+| The log hasn't changed through several runs the job was due for, or was never created | ✓ | ✓ | |
 | The job isn't loaded or the timer isn't started | | ✓ | ✓ |
 | The timer starts a service that doesn't exist | | | ✓ |
 | The crontab line or the plist is invalid | ✓ | ✓ | |
