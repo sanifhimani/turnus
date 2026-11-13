@@ -3,6 +3,7 @@ package claude
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -84,5 +85,25 @@ func TestDescribePrompt(t *testing.T) {
 	}
 	if got := describePrompt(filepath.Join(dir, "none.md")); got != "" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestReadDates(t *testing.T) {
+	jobs := read("testdata/scheduled-tasks.json", now)
+	byID := map[string]job.Job{}
+	for _, j := range jobs {
+		byID[strings.TrimPrefix(j.ID, "claude:")] = j
+	}
+	created := time.UnixMilli(1793000000000)
+	for _, id := range []string{"triage-inbox", "release-notes", "one-off", "by-hand"} {
+		if !byID[id].Created.Equal(created) {
+			t.Errorf("%s: created = %v, want %v", id, byID[id].Created, created)
+		}
+	}
+	if once := byID["one-off"].Once; !once.Equal(time.UnixMilli(1794330000000)) {
+		t.Errorf("one-off: once = %v", once)
+	}
+	if !byID["triage-inbox"].Once.IsZero() {
+		t.Error("a recurring task has no one-time run")
 	}
 }

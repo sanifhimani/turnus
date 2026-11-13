@@ -93,3 +93,109 @@ func TestClaudeSkipMessage(t *testing.T) {
 		t.Errorf("unknown reasons should still be reported, got %+v", p)
 	}
 }
+
+// missedEnv is noon on Sunday Nov 8 with Claude Desktop open since 8:00 and
+// the Mac awake since 7:00.
+func missedEnv() Env {
+	env := testEnv(nil)
+	env.Running = func(name string) bool { return name == "Claude" }
+	env.Started = func(string) time.Time { return env.Now.Add(-4 * time.Hour) }
+	env.Awake = env.Now.Add(-5 * time.Hour)
+	return env
+}
+
+func TestMissedRun(t *testing.T) {
+	ny, _ := time.LoadLocation("America/New_York")
+	at := func(d, h, m int) time.Time { return time.Date(2026, 11, d, h, m, 0, 0, ny) }
+	created := at(1, 10, 0)
+	claude := func(expr string, last time.Time) job.Job {
+		return job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Host: "Claude Desktop",
+			Expr: expr, LastRun: last, Created: created}
+	}
+
+	tests := []struct {
+		name string
+		job  job.Job
+		env  func(*Env)
+		want string
+	}{
+		{name: "ran today", job: claude("0 9 * * *", at(8, 9, 3))},
+		{
+			name: "missed today",
+			job:  claude("0 9 * * *", at(7, 9, 1)),
+			want: "Claude Desktop didn't run it today at 09:00, and its last run was Nov 7",
+		},
+		{
+			name: "missed several",
+			job:  claude("0 9 * * *", at(6, 9, 2)),
+			want: "Claude Desktop missed 2 runs, the latest today at 09:00, and its last run was Nov 6",
+		},
+		{
+			name: "missed yesterday",
+			job:  claude("0 9 * * 6", time.Date(2026, 10, 31, 9, 0, 0, 0, ny)),
+			want: "Claude Desktop didn't run it yesterday at 09:00, and its last run was Oct 31",
+		},
+		{
+			name: "never ran",
+			job:  job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Expr: "0 9 * * *", Created: at(5, 10, 0)},
+			want: "Claude Desktop missed 3 runs, the latest today at 09:00, and it has never run",
+		},
+		{name: "due within the random delay", job: claude("0 * * * *", at(8, 11, 2))},
+		{name: "created after it was due", job: job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Expr: "0 9 * * *", Created: at(8, 10, 0)}},
+		{name: "no dates to go by", job: job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Expr: "0 9 * * *"}},
+		{
+			name: "app closed",
+			job:  claude("0 9 * * *", at(6, 9, 2)),
+			env:  func(e *Env) { e.Running = func(string) bool { return false } },
+		},
+		{
+			name: "app just opened, catch-up may be on its way",
+			job:  claude("0 9 * * *", at(6, 9, 2)),
+			env:  func(e *Env) { e.Started = func(string) time.Time { return e.Now.Add(-5 * time.Minute) } },
+		},
+		{
+			name: "Mac just woke",
+			job:  claude("0 9 * * *", at(6, 9, 2)),
+			env:  func(e *Env) { e.Awake = e.Now.Add(-2 * time.Minute) },
+		},
+		{
+			name: "already reported as skipped",
+			job: func() job.Job {
+				j := claude("0 9 * * *", at(6, 9, 2))
+				j.Problems = []job.Problem{{Code: "skipped", Severity: job.Fail}}
+				return j
+			}(),
+		},
+		{
+			name: "disabled",
+			job: func() job.Job {
+				j := claude("0 9 * * *", at(6, 9, 2))
+				j.State = job.StateDisabled
+				return j
+			}(),
+		},
+		{
+			name: "one-time task that didn't run",
+			job:  job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Once: at(8, 9, 0), Created: at(7, 15, 0)},
+			want: "Claude Desktop didn't run it today at 09:00, and it has never run",
+		},
+		{name: "one-time task that ran", job: job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Once: at(8, 9, 0), Created: at(7, 15, 0), LastRun: at(8, 9, 1)}},
+		{name: "one-time task still to come", job: job.Job{Source: job.Claude, Kind: job.Scheduled, State: job.StateIdle, Once: at(8, 18, 0), Created: at(7, 15, 0)}},
+		{name: "not a Claude task", job: job.Job{Source: job.Hermes, Kind: job.Scheduled, State: job.StateIdle, Expr: "0 9 * * *", LastRun: at(6, 9, 0)}},
+	}
+	for _, tt := range tests {
+		env := missedEnv()
+		if tt.env != nil {
+			tt.env(&env)
+		}
+		p := missedRun(&tt.job, env)
+		switch {
+		case tt.want == "" && p != nil:
+			t.Errorf("%s: got %q, want no problem", tt.name, p.Summary)
+		case tt.want != "" && p == nil:
+			t.Errorf("%s: got no problem, want %q", tt.name, tt.want)
+		case p != nil && (p.Summary != tt.want || p.Severity != job.Warn):
+			t.Errorf("%s:\n got  %q\n want %q", tt.name, p.Summary, tt.want)
+		}
+	}
+}
