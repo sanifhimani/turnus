@@ -100,6 +100,13 @@ type Job struct {
 	// RunAs is the user a cron job runs as, when turnus knows it.
 	RunAs string `json:"-"`
 
+	// Created is when the job was set up, for schedulers that record it.
+	// Runs due before then can't have been missed.
+	Created time.Time `json:"-"`
+
+	// Once is when a one-time job is due to run.
+	Once time.Time `json:"-"`
+
 	// HistorySince is how far back the scheduler's log goes, for jobs whose
 	// LastRun comes from a log. A zero LastRun with a set HistorySince means
 	// the job hasn't run since then.

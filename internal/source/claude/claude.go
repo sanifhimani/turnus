@@ -40,6 +40,7 @@ type task struct {
 	Enabled        *bool       `json:"enabled"`
 	FilePath       string      `json:"filePath"`
 	LastRunAt      source.Time `json:"lastRunAt"`
+	CreatedAt      source.Time `json:"createdAt"`
 }
 
 // skip is a run the app didn't make, with its reason, such as
@@ -115,6 +116,7 @@ func toJob(t task, skips []skip, store string, now time.Time) job.Job {
 		File:    store,
 		Host:    Host,
 		LastRun: t.LastRunAt.Time,
+		Created: t.CreatedAt.Time,
 	}
 	if j.Name == "" {
 		j.Name = t.ID
@@ -136,6 +138,7 @@ func toJob(t task, skips []skip, store string, now time.Time) job.Job {
 			j.Next = c.Next(now)
 		}
 	case !t.FireAt.IsZero():
+		j.Once = t.FireAt.Time
 		j.Schedule = "once at " + t.FireAt.Local().Format("Jan 2 15:04")
 		if t.LastRunAt.IsZero() && t.FireAt.After(now) {
 			j.Next = t.FireAt.Time
