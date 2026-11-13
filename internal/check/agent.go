@@ -1,6 +1,9 @@
 package check
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/sanifhimani/turnus/internal/job"
 	"github.com/sanifhimani/turnus/internal/schedule"
 )
@@ -117,4 +120,92 @@ func hostRequired(j *job.Job, env Env) *job.Problem {
 		Severity: job.Info,
 		Summary:  "Runs only while " + j.Host + " is running",
 	}
+}
+
+const (
+	// missedGrace allows for the few minutes of random delay Claude Desktop
+	// adds before each run, and for runs that take a while to record.
+	missedGrace = 30 * time.Minute
+
+	// settleTime gives Claude Desktop time to run its catch-up after it
+	// opens or the Mac wakes, before a missed run is reported.
+	settleTime = 10 * time.Minute
+)
+
+// missedRun flags Claude Desktop tasks that should have run and didn't,
+// though the app was open and the Mac awake. When the app opens or the Mac
+// wakes, Claude Desktop runs one catch-up for the latest missed time, so a
+// run still missing after that is one the scheduler dropped.
+func missedRun(j *job.Job, env Env) *job.Problem {
+	if j.Source != job.Claude || j.Err != "" || j.State == job.StateDisabled || hasCode(j, "skipped") {
+		return nil
+	}
+	if env.Running == nil || !env.Running("Claude") {
+		return nil // hostRequired explains that the app is closed
+	}
+	// Until the app and the Mac have been up a while, a catch-up run may
+	// still be on its way.
+	up := env.Awake
+	if env.Started != nil {
+		up = latest(up, env.Started("Claude"))
+	}
+	if up.IsZero() || env.Now.Sub(up) < settleTime {
+		return nil
+	}
+
+	last := latest(j.LastRun, j.Created)
+	cutoff := env.Now.Add(-missedGrace)
+	var due time.Time
+	n := 0
+	switch {
+	case j.Expr != "":
+		c, err := schedule.ParseCron(j.Expr)
+		if err != nil {
+			return nil // agentSchedule reports the invalid schedule
+		}
+		for t := last.In(env.Loc); n < countLimit; n++ {
+			next := c.Next(t)
+			if next.IsZero() || next.After(cutoff) {
+				break
+			}
+			due, t = next, next
+		}
+	case !j.Once.IsZero():
+		if j.LastRun.IsZero() && j.Once.Before(cutoff) && j.Once.After(j.Created) {
+			due, n = j.Once, 1
+		}
+	}
+	if n == 0 || last.IsZero() {
+		return nil
+	}
+
+	since := "it has never run"
+	if !j.LastRun.IsZero() {
+		since = "its last run was " + day(j.LastRun, env)
+	}
+	summary := fmt.Sprintf("Claude Desktop didn't run it %s, and %s", when(due, env), since)
+	if n > 1 {
+		summary = fmt.Sprintf("Claude Desktop missed %d runs, the latest %s, and %s", n, when(due, env), since)
+	}
+	return &job.Problem{
+		Code:     "missed-run",
+		Severity: job.Warn,
+		Summary:  summary,
+		Fix:      "Quit and reopen Claude Desktop, which restarts its scheduler and runs the missed task once",
+	}
+}
+
+// when describes a recent time for a sentence: "today at 09:00",
+// "yesterday at 09:00", or "on Nov 10 at 09:00".
+func when(t time.Time, env Env) string {
+	t, now := t.In(env.Loc), env.Now.In(env.Loc)
+	clock := t.Format("15:04")
+	y, m, d := now.Date()
+	switch ty, tm, td := t.Date(); {
+	case ty == y && tm == m && td == d:
+		return "today at " + clock
+	case ty == y && tm == m && td == d-1:
+		return "yesterday at " + clock
+	}
+	return "on " + day(t, env) + " at " + clock
 }

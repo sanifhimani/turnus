@@ -47,11 +47,20 @@ type Env struct {
 	// Booted is when the machine last started, or the zero time if unknown.
 	// Runs due while it was off don't count as missed.
 	Booted time.Time
+
+	// Awake is when the machine last started or woke from sleep, whichever
+	// is later, or the zero time if unknown.
+	Awake time.Time
+
+	// Started returns when the app with this exact process name started,
+	// or the zero time if it isn't running.
+	Started func(name string) time.Time
 }
 
 // Local returns the environment of the machine Turnus is running on.
 func Local() Env {
 	home, _ := os.UserHomeDir()
+	boot := booted()
 	return Env{
 		GOOS:           runtime.GOOS,
 		Home:           home,
@@ -64,8 +73,54 @@ func Local() Env {
 		Running:        running(),
 		CronPath:       cronPath(),
 		LookPath:       exec.LookPath,
-		Booted:         booted(),
+		Booted:         boot,
+		Awake:          latest(boot, woke()),
+		Started:        started,
 	}
+}
+
+// woke returns when a Mac last woke from sleep. Linux has no simple
+// equivalent, and servers rarely sleep.
+func woke() time.Time {
+	if runtime.GOOS != "darwin" {
+		return time.Time{}
+	}
+	return sysctlTime("kern.waketime")
+}
+
+// sysctlTime reads a macOS timestamp such as kern.boottime, which prints as
+// "{ sec = 1792171821, usec = 95062 } Fri Oct 16 13:30:21 2026".
+func sysctlTime(name string) time.Time {
+	out, err := exec.Command("sysctl", "-n", name).Output()
+	if err != nil {
+		return time.Time{}
+	}
+	var sec int64
+	if _, err := fmt.Sscanf(string(out), "{ sec = %d,", &sec); err != nil || sec <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(sec, 0)
+}
+
+// started returns when the process with this exact name started. ps prints
+// the start time in the C locale as "Fri Oct 16 13:40:44 2026".
+func started(name string) time.Time {
+	out, err := exec.Command("pgrep", "-x", name).Output()
+	if err != nil {
+		return time.Time{}
+	}
+	pid, _, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
+	cmd := exec.Command("ps", "-o", "lstart=", "-p", pid)
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
+	out, err = cmd.Output()
+	if err != nil {
+		return time.Time{}
+	}
+	t, err := time.ParseInLocation("Mon Jan 2 15:04:05 2006", strings.Join(strings.Fields(string(out)), " "), time.Local)
+	if err != nil {
+		return time.Time{}
+	}
+	return t
 }
 
 // booted returns when the machine started: from kern.boottime on macOS and
@@ -74,14 +129,7 @@ func booted() time.Time {
 	var sec int64
 	switch runtime.GOOS {
 	case "darwin":
-		out, err := exec.Command("sysctl", "-n", "kern.boottime").Output()
-		if err != nil {
-			return time.Time{}
-		}
-		// { sec = 1792171821, usec = 95062 } Fri Oct 16 13:30:21 2026
-		if _, err := fmt.Sscanf(string(out), "{ sec = %d,", &sec); err != nil {
-			return time.Time{}
-		}
+		return sysctlTime("kern.boottime")
 	case "linux":
 		data, err := os.ReadFile("/proc/stat")
 		if err != nil {
@@ -156,6 +204,7 @@ var checkers = []checker{
 	staleLog,
 	agentSchedule,
 	lastResult,
+	missedRun,
 	hostRequired,
 }
 
