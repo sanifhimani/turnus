@@ -94,6 +94,7 @@ turnus runs these checks on the tasks that AI agents schedule.
 | Check | Claude Desktop | ChatGPT desktop app | Hermes |
 |---|:-:|:-:|:-:|
 | The app skipped the last run, with the reason it gives | ✓ | | |
+| The task was due and didn't run, though the app was open | ✓ | | |
 | The last run failed | | | ✓ |
 | The schedule is invalid | ✓ | | ✓ |
 | The task runs only while its app or service is running | ✓ | ✓ | ✓ |
