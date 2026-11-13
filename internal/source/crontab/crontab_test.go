@@ -3,6 +3,7 @@ package crontab
 import (
 	"errors"
 	"io/fs"
+	"slices"
 	"testing"
 	"time"
 
@@ -63,6 +64,27 @@ func TestFindRunner(t *testing.T) {
 	for _, tt := range tests {
 		if got := findRunner(debian, tt.dir, tt.anacron); got != tt.want {
 			t.Errorf("findRunner(%s, anacron=%v) = %+v, want %+v", tt.dir, tt.anacron, got, tt.want)
+		}
+	}
+}
+
+func TestToJobLookups(t *testing.T) {
+	cmd := "node /opt/sync.js"
+	tests := []struct {
+		name string
+		env  map[string]string
+		want []string
+		path string
+	}{
+		{"default shell", nil, []string{"node"}, ""},
+		{"crontab sets PATH", map[string]string{"PATH": "/usr/local/bin:/usr/bin:/bin"}, []string{"node"}, "/usr/local/bin:/usr/bin:/bin"},
+		{"zsh reads .zshenv", map[string]string{"SHELL": "/bin/zsh"}, nil, ""},
+		{"BASH_ENV runs a file first", map[string]string{"SHELL": "/bin/bash", "BASH_ENV": "/home/me/.env"}, nil, ""},
+	}
+	for _, tt := range tests {
+		j := toJob(Entry{Line: 1, Expr: "@daily", Command: cmd, Env: tt.env}, "/var/spool/cron/me", job.User, now)
+		if !slices.Equal(j.Lookups, tt.want) || j.SearchPath != tt.path {
+			t.Errorf("%s: lookups = %q, path = %q; want %q, %q", tt.name, j.Lookups, j.SearchPath, tt.want, tt.path)
 		}
 	}
 }

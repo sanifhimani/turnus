@@ -82,3 +82,50 @@ func TestUnescapedPercent(t *testing.T) {
 		}
 	}
 }
+
+func TestPathLookups(t *testing.T) {
+	tests := []struct {
+		cmd  string
+		want []string
+	}{
+		{"node /opt/sync.js", []string{"node"}},
+		{"cd /srv && docker compose up -d", []string{"docker"}},
+		{"pg_dump app | gzip > /backups/app.gz", []string{"pg_dump", "gzip"}},
+		{"FOO=1 BAR=2 rsync -a /src /dst; rsync -a /x /y", []string{"rsync"}},
+		{"if [ -f /tmp/go ]; then exec python3 /opt/run.py; fi", []string{"python3"}},
+		{"nohup node /srv/app.js &", []string{"node"}},
+		{"test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.daily; }", []string{"run-parts"}},
+		{"/usr/local/bin/backup.sh >> /var/log/b.log 2>&1", nil},
+		{"cd /srv && ./bin/sync", nil},
+		{"$HOME/bin/sync && ~/bin/other", nil},
+		{"echo hi && true", nil},
+		{"find . -name '*.tmp' -delete", []string{"find"}},
+
+		// The command may change PATH before the lookups happen.
+		{"PATH=/opt/homebrew/bin:$PATH node /opt/sync.js", nil},
+		{"export PATH=/opt/bin:/usr/bin; node x.js", nil},
+		{". $HOME/.profile && node /opt/sync.js", nil},
+		{"source ~/.nvm/nvm.sh; node /opt/sync.js", nil},
+		{"bash -lc 'node /opt/sync.js'", nil},
+		{"/bin/bash --login -c 'node /opt/sync.js'", nil},
+		{"zsh -c 'node /opt/sync.js'", nil},
+		{"/opt/homebrew/bin/fish -c 'node /opt/sync.js'", nil},
+		{"bash -c 'node /opt/sync.js'", []string{"bash", "node"}},
+	}
+	for _, tt := range tests {
+		if got := pathLookups(tt.cmd); !slices.Equal(got, tt.want) {
+			t.Errorf("pathLookups(%q) = %q, want %q", tt.cmd, got, tt.want)
+		}
+	}
+}
+
+func TestAssignment(t *testing.T) {
+	for word, want := range map[string]bool{
+		"FOO=1": true, "_x=": true, "A1=b": true,
+		"1A=b": false, "=x": false, "--opt=1": false, "a-b=1": false, "node": false,
+	} {
+		if got := assignment(word); got != want {
+			t.Errorf("assignment(%q) = %v, want %v", word, got, want)
+		}
+	}
+}

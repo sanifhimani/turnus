@@ -1,6 +1,8 @@
 package launchd
 
 import (
+	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -132,5 +134,20 @@ func TestMergeCron(t *testing.T) {
 		if got != tt.want || ok != tt.ok {
 			t.Errorf("mergeCron(%q) = %q, %v; want %q, %v", tt.in, got, ok, tt.want, tt.ok)
 		}
+	}
+}
+
+func TestReadJobLookups(t *testing.T) {
+	now := time.Date(2026, 11, 8, 21, 30, 0, 0, time.Local)
+	agent := location{dir: "testdata"}
+
+	// launchd searches its own fixed PATH for a bare first argument, so the
+	// plist's EnvironmentVariables PATH doesn't count.
+	j := readJob(filepath.Join("testdata", "bare.plist"), agent, now)
+	if !slices.Equal(j.Lookups, []string{"node"}) || j.SearchPath != "" {
+		t.Errorf("bare.plist: lookups = %q, path = %q", j.Lookups, j.SearchPath)
+	}
+	if j = readJob(filepath.Join("testdata", "interval.plist"), agent, now); j.Lookups != nil {
+		t.Errorf("interval.plist: lookups = %q, want none for an absolute path", j.Lookups)
 	}
 }
