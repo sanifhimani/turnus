@@ -35,6 +35,13 @@ type Env struct {
 
 	// Running reports whether a process with this exact name is running.
 	Running func(name string) bool
+
+	// CronPath is the PATH cron gives jobs whose crontab doesn't set one.
+	CronPath string
+
+	// LookPath finds a program in the PATH turnus runs with, which is
+	// usually the user's shell.
+	LookPath func(name string) (string, error)
 }
 
 // Local returns the environment of the machine Turnus is running on.
@@ -50,7 +57,18 @@ func Local() Env {
 		HasMail:        func() bool { return exists("/usr/sbin/sendmail") },
 		DebianRunParts: exists("/etc/debian_version"),
 		Running:        running(),
+		CronPath:       cronPath(),
+		LookPath:       exec.LookPath,
 	}
+}
+
+// cronPath returns the PATH cron sets for jobs. cronie, the cron of Fedora
+// and Red Hat, adds the sbin folders; Debian's cron and macOS's don't.
+func cronPath() string {
+	if runtime.GOOS == "linux" && exists("/usr/sbin/crond") {
+		return "/usr/bin:/bin:/usr/sbin:/sbin"
+	}
+	return "/usr/bin:/bin"
 }
 
 // running returns a lookup that asks pgrep once per process name, since
@@ -86,6 +104,7 @@ var checkers = []checker{
 	noProgram,
 	programMissing,
 	notExecutable,
+	notInPath,
 	logDirMissing,
 	lastRun,
 	unloaded,
