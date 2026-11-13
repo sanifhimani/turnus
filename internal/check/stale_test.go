@@ -3,6 +3,7 @@ package check
 import (
 	"io/fs"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ func (i fileInfo) Mode() fs.FileMode {
 	if i.f.dir {
 		return fs.ModeDir | 0o755
 	}
-	return 0o644
+	return 0o755
 }
 
 // staleEnv is a Linux machine at noon on Sunday Nov 8, booted a month ago.
@@ -212,5 +213,87 @@ func TestStaleLogQuietAfterFailure(t *testing.T) {
 	j.Problems = []job.Problem{{Code: "program-missing", Severity: job.Fail}}
 	if p := staleLog(&j, staleEnv(files)); p != nil {
 		t.Errorf("got %q, want no problem after a failure", p.Summary)
+	}
+}
+
+func TestNotRunning(t *testing.T) {
+	ny, _ := time.LoadLocation("America/New_York")
+	at := func(d, h int) time.Time { return time.Date(2026, 11, d, h, 0, 0, 0, ny) }
+	since := at(1, 0)
+
+	tests := []struct {
+		name string
+		job  job.Job
+		want string
+	}{
+		{
+			name: "ran recently",
+			job:  job.Job{Source: job.Cron, Kind: job.Scheduled, Expr: "0 3 * * *", HistorySince: since, LastRun: at(8, 3)},
+		},
+		{
+			name: "never ran while the log covers it",
+			job:  job.Job{Source: job.Cron, Kind: job.Scheduled, Expr: "0 3 * * *", HistorySince: since},
+			want: "cron's log shows no runs since Nov 1, though it was due to run 8 times",
+		},
+		{
+			name: "stopped running",
+			job:  job.Job{Source: job.Cron, Kind: job.Scheduled, Expr: "0 * * * *", HistorySince: since, LastRun: at(7, 12)},
+			want: "Last ran Nov 7, though it was due to run 24 times since",
+		},
+		{
+			name: "no log to go by",
+			job:  job.Job{Source: job.Cron, Kind: job.Scheduled, Expr: "0 3 * * *"},
+		},
+		{
+			name: "a failure already explains it",
+			job: job.Job{Source: job.Cron, Kind: job.Scheduled, Expr: "0 3 * * *", HistorySince: since,
+				Problems: []job.Problem{{Code: "not-in-path", Severity: job.Fail}}},
+		},
+	}
+	for _, tt := range tests {
+		p := notRunning(&tt.job, staleEnv(map[string]file{}))
+		switch {
+		case tt.want == "" && p != nil:
+			t.Errorf("%s: got %q, want no problem", tt.name, p.Summary)
+		case tt.want != "" && p == nil:
+			t.Errorf("%s: got no problem, want %q", tt.name, tt.want)
+		case p != nil && p.Summary != tt.want:
+			t.Errorf("%s:\n got  %q\n want %q", tt.name, p.Summary, tt.want)
+		}
+	}
+}
+
+// A job cron's log shows isn't running gets one problem, not two.
+func TestNotRunningReplacesStaleLog(t *testing.T) {
+	ny, _ := time.LoadLocation("America/New_York")
+	files := map[string]file{
+		"/var/log/b.log": {mod: time.Date(2026, 11, 1, 3, 0, 0, 0, ny), size: 10},
+		"/var/log/":      {dir: true},
+		"/opt/backup.sh": {size: 100},
+	}
+	j := cronJob("0 3 * * *", "/var/log/b.log")
+	j.HistorySince = time.Date(2026, 11, 1, 0, 0, 0, 0, ny)
+	jobs := []job.Job{j}
+	Run(jobs, staleEnv(files))
+	if got := codes(jobs[0]); !slices.Contains(got, "not-running") || slices.Contains(got, "stale-log") {
+		t.Errorf("codes = %q", got)
+	}
+}
+
+// When cron's log shows a recent run, a quiet log is just a quiet job.
+func TestRecentRunQuietsStaleLog(t *testing.T) {
+	ny, _ := time.LoadLocation("America/New_York")
+	files := map[string]file{
+		"/var/log/b.log": {mod: time.Date(2026, 11, 1, 3, 0, 0, 0, ny), size: 10},
+		"/var/log/":      {dir: true},
+		"/opt/backup.sh": {size: 100},
+	}
+	j := cronJob("0 3 * * *", "/var/log/b.log")
+	j.HistorySince = time.Date(2026, 11, 1, 0, 0, 0, 0, ny)
+	j.LastRun = time.Date(2026, 11, 8, 3, 0, 0, 0, ny)
+	jobs := []job.Job{j}
+	Run(jobs, staleEnv(files))
+	if got := codes(jobs[0]); slices.Contains(got, "stale-log") || slices.Contains(got, "not-running") {
+		t.Errorf("codes = %q", got)
 	}
 }
