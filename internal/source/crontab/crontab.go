@@ -241,6 +241,8 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 		LogPath:  logPath(runs),
 
 		Interpreted: interpreted,
+		Lookups:     lookups(runs, e.Env),
+		SearchPath:  e.Env["PATH"],
 	}
 
 	c, err := schedule.ParseCron(e.Expr)
@@ -254,6 +256,16 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 	}
 	j.Next = c.Next(now.In(location(e.Env)))
 	return j
+}
+
+// lookups returns the programs the command runs by bare name, unless the
+// crontab picks a shell that may set its own PATH: zsh and fish read the
+// user's startup files, and BASH_ENV and ENV name a file the shell reads first.
+func lookups(cmd string, env map[string]string) []string {
+	if profileShells[filepath.Base(env["SHELL"])] || env["BASH_ENV"] != "" || env["ENV"] != "" {
+		return nil
+	}
+	return pathLookups(cmd)
 }
 
 // location honors CRON_TZ, which most cron implementations support.

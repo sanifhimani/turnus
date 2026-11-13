@@ -130,6 +130,11 @@ func readJob(path string, loc location, now time.Time) job.Job {
 	}
 	j.Command = s.command()
 	j.Program = s.program()
+	// Without a Program key, launchd finds a bare first argument by
+	// searching a fixed PATH, ignoring the job's EnvironmentVariables.
+	if s.Program == "" && j.Program != "" && !strings.Contains(j.Program, "/") {
+		j.Lookups = []string{j.Program}
+	}
 	j.LogPath = s.StandardOutPath
 	if j.LogPath == "" {
 		j.LogPath = s.StandardErrorPath

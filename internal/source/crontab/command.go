@@ -2,7 +2,9 @@ package crontab
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
+	"unicode"
 )
 
 var interpreters = map[string]bool{
@@ -64,6 +66,112 @@ func commandName(cmd string) (name, program string, interpreted bool) {
 		return filepath.Base(prog), program, interpreted
 	}
 	return strings.TrimSpace(cmd), "", false
+}
+
+// builtins are run by the shell itself, or are keywords that close a compound
+// command, so PATH plays no part in finding them.
+var builtins = map[string]bool{
+	":": true, "[": true, "[[": true, "alias": true, "bg": true, "break": true,
+	"builtin": true, "case": true, "cd": true, "command": true, "continue": true,
+	"declare": true, "done": true, "echo": true, "esac": true, "eval": true,
+	"exit": true, "export": true, "false": true, "fg": true, "fi": true,
+	"for": true, "function": true, "getopts": true, "hash": true, "jobs": true,
+	"kill": true, "let": true, "local": true, "printf": true, "pwd": true,
+	"read": true, "readonly": true, "return": true, "select": true, "set": true,
+	"shift": true, "test": true, "times": true, "trap": true, "true": true,
+	"type": true, "typeset": true, "ulimit": true, "umask": true,
+	"unalias": true, "unset": true, "wait": true, "}": true, ")": true,
+}
+
+// prefixes precede the command they run, which is looked up as usual.
+var prefixes = map[string]bool{
+	"!": true, "{": true, "(": true, "if": true, "then": true, "else": true,
+	"elif": true, "while": true, "until": true, "do": true, "exec": true,
+	"nohup": true, "time": true,
+}
+
+// Shells that read the user's startup files on every run, where PATH is
+// often set. Commands they run can't be checked against a known PATH.
+var profileShells = map[string]bool{"zsh": true, "fish": true}
+
+// Shells that read startup files only as a login or interactive shell.
+var shells = map[string]bool{"sh": true, "bash": true, "dash": true, "ksh": true}
+
+// pathLookups returns the programs a command runs by bare name, which the
+// shell finds by searching PATH. It returns nil when the command may change
+// PATH before running them: by setting it, by sourcing a file, or by starting
+// a shell that reads the user's startup files. Words only the shell can
+// resolve, such as $TOOL, are left out.
+//
+//	cd /srv && node sync.js | gzip  ->  node, gzip
+func pathLookups(cmd string) []string {
+	if strings.Contains(cmd, "PATH=") || startsProfileShell(shellFields(cmd)) {
+		return nil
+	}
+	var names []string
+	for _, seg := range segments(cmd) {
+		for part := range strings.SplitSeq(seg, "|") {
+			fields := shellFields(part)
+			for len(fields) > 0 && (prefixes[fields[0]] || assignment(fields[0])) {
+				fields = fields[1:]
+			}
+			if len(fields) == 0 {
+				continue
+			}
+			name := fields[0]
+			switch {
+			case name == "." || name == "source":
+				return nil
+			case builtins[name], strings.ContainsAny(name, "/$`~=*?<>&"), slices.Contains(names, name):
+				continue
+			}
+			names = append(names, name)
+			// A non-login shell keeps the PATH it was given, so the
+			// script it runs is looked up the same way.
+			if shells[name] && len(fields) > 2 && fields[1] == "-c" {
+				for _, inner := range pathLookups(fields[2]) {
+					if !slices.Contains(names, inner) {
+						names = append(names, inner)
+					}
+				}
+			}
+		}
+	}
+	return names
+}
+
+// startsProfileShell reports whether the words run zsh or fish, or another
+// shell as a login or interactive shell.
+func startsProfileShell(fields []string) bool {
+	for i, f := range fields {
+		base := filepath.Base(f)
+		if profileShells[base] {
+			return true
+		}
+		if !shells[base] || i+1 == len(fields) {
+			continue
+		}
+		flag := fields[i+1]
+		if flag == "--login" || (strings.HasPrefix(flag, "-") && !strings.HasPrefix(flag, "--") && strings.ContainsAny(flag, "il")) {
+			return true
+		}
+	}
+	return false
+}
+
+// assignment reports whether a word sets a variable for the command after
+// it, as in FOO=1.
+func assignment(word string) bool {
+	name, _, ok := strings.Cut(word, "=")
+	if !ok || name == "" {
+		return false
+	}
+	for i, r := range name {
+		if r != '_' && !unicode.IsLetter(r) && (i == 0 || !unicode.IsDigit(r)) {
+			return false
+		}
+	}
+	return true
 }
 
 // beforePercent returns the command up to its first unescaped %. cron turns

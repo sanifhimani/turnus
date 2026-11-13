@@ -88,6 +88,15 @@ type Job struct {
 	// as in "sh backup.sh", so it does not need to be executable.
 	Interpreted bool `json:"-"`
 
+	// Lookups are the programs the command runs by bare name, such as node
+	// in "node sync.js", which the scheduler or shell finds by searching
+	// PATH. It is empty when turnus can't predict the PATH the job will get.
+	Lookups []string `json:"-"`
+
+	// SearchPath is the PATH the job's definition sets for its command. When
+	// empty, the scheduler's default applies.
+	SearchPath string `json:"-"`
+
 	Schedule string    `json:"schedule"`
 	Expr     string    `json:"expr,omitempty"`
 	Next     time.Time `json:"next,omitzero"`
