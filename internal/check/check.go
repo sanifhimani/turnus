@@ -4,6 +4,7 @@ package check
 
 import (
 	"cmp"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -42,6 +43,10 @@ type Env struct {
 	// LookPath finds a program in the PATH turnus runs with, which is
 	// usually the user's shell.
 	LookPath func(name string) (string, error)
+
+	// Booted is when the machine last started, or the zero time if unknown.
+	// Runs due while it was off don't count as missed.
+	Booted time.Time
 }
 
 // Local returns the environment of the machine Turnus is running on.
@@ -59,7 +64,39 @@ func Local() Env {
 		Running:        running(),
 		CronPath:       cronPath(),
 		LookPath:       exec.LookPath,
+		Booted:         booted(),
 	}
+}
+
+// booted returns when the machine started: from kern.boottime on macOS and
+// the btime line of /proc/stat on Linux.
+func booted() time.Time {
+	var sec int64
+	switch runtime.GOOS {
+	case "darwin":
+		out, err := exec.Command("sysctl", "-n", "kern.boottime").Output()
+		if err != nil {
+			return time.Time{}
+		}
+		// { sec = 1792171821, usec = 95062 } Fri Oct 16 13:30:21 2026
+		if _, err := fmt.Sscanf(string(out), "{ sec = %d,", &sec); err != nil {
+			return time.Time{}
+		}
+	case "linux":
+		data, err := os.ReadFile("/proc/stat")
+		if err != nil {
+			return time.Time{}
+		}
+		for line := range strings.Lines(string(data)) {
+			if _, err := fmt.Sscanf(line, "btime %d", &sec); err == nil {
+				break
+			}
+		}
+	}
+	if sec <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(sec, 0)
 }
 
 // cronPath returns the PATH cron sets for jobs. cronie, the cron of Fedora
@@ -115,6 +152,7 @@ var checkers = []checker{
 	output,
 	percent,
 	skippedByRunParts,
+	staleLog,
 	agentSchedule,
 	lastResult,
 	hostRequired,
