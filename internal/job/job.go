@@ -97,6 +97,14 @@ type Job struct {
 	// empty, the scheduler's default applies.
 	SearchPath string `json:"-"`
 
+	// RunAs is the user a cron job runs as, when turnus knows it.
+	RunAs string `json:"-"`
+
+	// HistorySince is how far back the scheduler's log goes, for jobs whose
+	// LastRun comes from a log. A zero LastRun with a set HistorySince means
+	// the job hasn't run since then.
+	HistorySince time.Time `json:"-"`
+
 	Schedule string    `json:"schedule"`
 	Expr     string    `json:"expr,omitempty"`
 	Next     time.Time `json:"next,omitzero"`

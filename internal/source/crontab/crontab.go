@@ -60,6 +60,10 @@ func Discover(ctx context.Context, now time.Time, builtin bool) ([]job.Job, erro
 		jobs = append(jobs, discoverPeriodic(p.dir, p.schedule, r, now)...)
 	}
 
+	if h, ok := readHistory(ctx, now); ok {
+		applyHistory(jobs, h)
+	}
+
 	markBuiltin(jobs, packageFiles(dpkgStatus))
 	if !builtin {
 		jobs = slices.DeleteFunc(jobs, func(j job.Job) bool { return j.Builtin })
@@ -86,9 +90,15 @@ func discoverUser(ctx context.Context, now time.Time) ([]job.Job, error) {
 		return nil, err
 	}
 	path := userTabPath()
+	var name string
+	if u, err := user.Current(); err == nil {
+		name = u.Username
+	}
 	jobs := make([]job.Job, 0, len(entries))
 	for _, e := range entries {
-		jobs = append(jobs, toJob(e, path, job.User, now))
+		j := toJob(e, path, job.User, now)
+		j.RunAs = name
+		jobs = append(jobs, j)
 	}
 	return jobs, nil
 }
@@ -243,6 +253,7 @@ func toJob(e Entry, file string, scope job.Scope, now time.Time) job.Job {
 		Interpreted: interpreted,
 		Lookups:     lookups(runs, e.Env),
 		SearchPath:  e.Env["PATH"],
+		RunAs:       e.User,
 	}
 
 	c, err := schedule.ParseCron(e.Expr)
