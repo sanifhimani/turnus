@@ -76,6 +76,7 @@ turnus runs these checks on every cron, launchd and systemd job.
 | The program isn't in the PATH the scheduler gives the job, though it's in yours | ✓ | ✓ | |
 | The log folder is missing, so the job can't start | ✓ | ✓ | |
 | The log hasn't changed through several runs the job was due for, or was never created | ✓ | ✓ | |
+| cron's own log shows the job hasn't run through several runs it was due for | Linux | | |
 | The job isn't loaded or the timer isn't started | | ✓ | ✓ |
 | The timer starts a service that doesn't exist | | | ✓ |
 | The crontab line or the plist is invalid | ✓ | ✓ | |
@@ -117,8 +118,12 @@ tasks from `~/.codex/automations`, and Hermes jobs from
 files, so turnus reads them carefully and tells you when it finds a format it
 doesn't know.
 
-cron keeps no history of past runs, so turnus can't tell you whether a cron
-job's last run succeeded.
+On Linux, cron writes a line to the system log each time it starts a job.
+turnus reads those lines from the journal, or from `/var/log/syslog` or
+`/var/log/cron`, to show when each cron job last ran. Reading them takes
+membership in the `adm` or `systemd-journal` group, or root. cron doesn't log
+how a job ended, so turnus can't tell you whether a cron job's last run
+succeeded. macOS logs neither.
 
 turnus runs on macOS and Linux.
 
