@@ -152,6 +152,7 @@ var checkers = []checker{
 	output,
 	percent,
 	skippedByRunParts,
+	notRunning,
 	staleLog,
 	agentSchedule,
 	lastResult,

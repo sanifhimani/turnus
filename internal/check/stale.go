@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -34,7 +35,7 @@ const (
 // exists but stopped changing is weaker, since a job that prints only on
 // errors leaves its log alone when it works.
 func staleLog(j *job.Job, env Env) *job.Problem {
-	if j.Kind != job.Scheduled || j.Err != "" || j.LogPath == "" || hasFail(j) {
+	if j.Kind != job.Scheduled || j.Err != "" || j.LogPath == "" || hasFail(j) || hasCode(j, "not-running") {
 		return nil
 	}
 	switch {
@@ -90,6 +91,35 @@ func staleLog(j *job.Job, env Env) *job.Problem {
 		}
 	}
 	return &job.Problem{Code: "stale-log", Severity: job.Warn, Summary: summary, Fix: fix}
+}
+
+// notRunning flags cron jobs that cron's log shows haven't run through
+// several runs they were due for. Unlike a stale log, this doesn't depend on
+// the job printing anything.
+func notRunning(j *job.Job, env Env) *job.Problem {
+	if j.Source != job.Cron || j.Kind != job.Scheduled || j.Err != "" || j.HistorySince.IsZero() || hasFail(j) {
+		return nil
+	}
+	start := latest(latest(j.HistorySince, savedAt(j, env)), env.Booted)
+	start = latest(start, j.LastRun)
+	n, ok := overdue(j, start, env)
+	if !ok {
+		return nil
+	}
+	summary := fmt.Sprintf("cron's log shows no runs since %s, though it was due to run %s", day(start, env), n)
+	if !j.LastRun.IsZero() {
+		summary = fmt.Sprintf("Last ran %s, though it was due to run %s since", day(j.LastRun, env), n)
+	}
+	return &job.Problem{
+		Code:     "not-running",
+		Severity: job.Warn,
+		Summary:  summary,
+		Fix:      "Check that the cron service is running, then run the command by hand to see the error",
+	}
+}
+
+func hasCode(j *job.Job, code string) bool {
+	return slices.ContainsFunc(j.Problems, func(p job.Problem) bool { return p.Code == code })
 }
 
 // overdue counts the runs due after start and reports whether there are
