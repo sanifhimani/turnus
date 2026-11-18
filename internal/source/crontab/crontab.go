@@ -64,7 +64,7 @@ func Discover(ctx context.Context, now time.Time, builtin bool) ([]job.Job, erro
 		applyHistory(jobs, h)
 	}
 
-	markBuiltin(jobs, packageFiles(dpkgStatus))
+	markBuiltin(jobs, packageFiles(ctx, cronFiles(jobs)))
 	if !builtin {
 		jobs = slices.DeleteFunc(jobs, func(j job.Job) bool { return j.Builtin })
 	}

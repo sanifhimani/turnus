@@ -7,7 +7,7 @@ import (
 )
 
 func TestPackageFiles(t *testing.T) {
-	files := packageFiles("testdata/dpkg-status")
+	files := dpkgFiles("testdata/dpkg-status")
 	for _, want := range []string{"/etc/cron.daily/dpkg", "/etc/cron.d/e2scrub_all", "/etc/crontab"} {
 		if !files[want] {
 			t.Errorf("missing %s", want)
@@ -16,7 +16,7 @@ func TestPackageFiles(t *testing.T) {
 	if files["/etc/dpkg/dpkg.cfg"] {
 		t.Error("non-cron files should be skipped")
 	}
-	if len(packageFiles("testdata/missing")) != 0 {
+	if len(dpkgFiles("testdata/missing")) != 0 {
 		t.Error("a missing database should give no files")
 	}
 }
@@ -29,7 +29,7 @@ func TestMarkBuiltin(t *testing.T) {
 		{File: "/etc/cron.d/myapp"},
 		{File: "/var/spool/cron/crontabs/root"},
 	}
-	markBuiltin(jobs, packageFiles("testdata/dpkg-status"))
+	markBuiltin(jobs, dpkgFiles("testdata/dpkg-status"))
 	want := []bool{true, false, true, false, false}
 	for i, j := range jobs {
 		if j.Builtin != want[i] {
