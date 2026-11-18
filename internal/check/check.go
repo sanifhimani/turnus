@@ -207,6 +207,7 @@ var checkers = []checker{
 	daylightSaving,
 	protectedFolder,
 	output,
+	unmonitored,
 	percent,
 	skippedByRunParts,
 	notRunning,

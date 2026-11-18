@@ -131,3 +131,37 @@ func periodicDir(path string) bool {
 	}
 	return false
 }
+
+// heartbeats are addresses and tools of services that alert when a job stops
+// checking in: Healthchecks, Cronitor, Uptime Kuma push monitors, Dead Man's
+// Snitch, Better Stack and Cronhub. "heartbeat" catches self-hosted ones.
+var heartbeats = []string{
+	"hc-ping.com", "healthchecks", "runitor", "cronitor", "/api/push/",
+	"nosnch.in", "betteruptime.com", "betterstack.com", "cronhub.io", "heartbeat",
+}
+
+// unmonitored notes cron jobs that could stop working without anything
+// saying so: no log, no mail to an address someone reads, and no ping to a
+// service that alerts when the pings stop.
+func unmonitored(j *job.Job, env Env) *job.Problem {
+	if j.Source != job.Cron || j.Err != "" || j.LogPath != "" || periodicDir(j.File) {
+		return nil
+	}
+	cmd := strings.ToLower(j.Command)
+	for _, h := range heartbeats {
+		if strings.Contains(cmd, h) {
+			return nil
+		}
+	}
+	// Mail to a real address counts. Mail to the local mailbox doesn't:
+	// few people read it.
+	if to := j.Env["MAILTO"]; strings.Contains(to, "@") && (env.HasMail == nil || env.HasMail()) {
+		return nil
+	}
+	return &job.Problem{
+		Code:     "unmonitored",
+		Severity: job.Info,
+		Summary:  "Nothing would tell you if this job stopped working: it has no log, no mail and no heartbeat",
+		Fix:      "Add a ping such as && curl -fsS https://hc-ping.com/<your-id> after the command, and a service like Healthchecks or Uptime Kuma alerts you when the pings stop",
+	}
+}

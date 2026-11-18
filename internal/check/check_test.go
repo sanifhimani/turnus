@@ -153,7 +153,7 @@ func TestRun(t *testing.T) {
 			name: "cron reading Documents",
 			job: job.Job{Source: job.Cron, Kind: job.Scheduled, Command: "/usr/bin/true ~/Documents/notes >/dev/null",
 				Program: "/usr/bin/true", Expr: "*/5 * * * *"},
-			want: []string{"protected-folder", "output"},
+			want: []string{"protected-folder", "output", "unmonitored"},
 		},
 		{
 			name: "timer starts a missing service",
