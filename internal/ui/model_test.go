@@ -198,6 +198,9 @@ func TestStatus(t *testing.T) {
 		{job.Job{Kind: job.Scheduled, State: job.StateIdle, LastExit: &segv}, "waiting · last run killed (segmentation fault)"},
 		{job.Job{Kind: job.Service, State: job.StateIdle, LastExit: &fail}, "stopped · last exit 3"},
 		{job.Job{Kind: job.Service, State: job.StateRunning, PID: 42}, "running · pid 42"},
+		{job.Job{Source: job.Cron, Kind: job.Scheduled, State: job.StateIdle}, "waiting · cron keeps no run history"},
+		{job.Job{Source: job.Cron, Kind: job.Scheduled, State: job.StateIdle,
+			HistorySince: time.Now().Add(-48 * time.Hour), LastRun: time.Now().Add(-3 * time.Hour)}, "waiting · last ran 3h ago"},
 	}
 	for _, tt := range tests {
 		if got := status(&tt.j); got != tt.want {

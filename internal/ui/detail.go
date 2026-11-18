@@ -100,7 +100,8 @@ func status(j *job.Job) string {
 	default:
 		parts = append(parts, fmt.Sprintf("last exit %d", *code))
 	}
-	if j.Source == job.Cron {
+	// On Linux, cron's log gives cron jobs a run history.
+	if j.Source == job.Cron && j.HistorySince.IsZero() {
 		parts = append(parts, "cron keeps no run history")
 	}
 	return strings.Join(parts, " · ")
