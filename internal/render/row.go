@@ -3,6 +3,7 @@ package render
 import (
 	"cmp"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"syscall"
@@ -279,6 +280,33 @@ func Summary(jobs []job.Job, s style.Style) string {
 		parts = append(parts, s.Green("all healthy"))
 	}
 	return strings.Join(parts, s.Dim(" · "))
+}
+
+// Unmonitored counts the cron jobs that nothing would report on if they
+// stopped working, out of the cron jobs that were checked: those the user
+// added, outside the periodic folders, whose definitions could be read.
+func Unmonitored(jobs []job.Job) (n, of int) {
+	for i := range jobs {
+		j := &jobs[i]
+		if j.Source != job.Cron || j.Builtin || j.Err != "" || periodic(j.File) {
+			continue
+		}
+		of++
+		if slices.ContainsFunc(j.Problems, func(p job.Problem) bool { return p.Code == "unmonitored" }) {
+			n++
+		}
+	}
+	return n, of
+}
+
+// periodic reports whether a file is a script in /etc/cron.daily and the
+// like, which run-parts starts and whose output the crontab line handles.
+func periodic(file string) bool {
+	switch filepath.Dir(file) {
+	case "/etc/cron.hourly", "/etc/cron.daily", "/etc/cron.weekly", "/etc/cron.monthly":
+		return true
+	}
+	return false
 }
 
 // Until formats the time to the next run, such as "in 4m" or "in 2d".

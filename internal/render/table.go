@@ -52,6 +52,14 @@ func Table(w io.Writer, jobs []job.Job, o Options) error {
 	b.WriteByte('\n')
 	b.WriteString(Summary(jobs, s))
 	b.WriteByte('\n')
+	if n, of := Unmonitored(jobs); n > 0 {
+		line := fmt.Sprintf("%d of %s would fail without anyone noticing: no log, no mail, no heartbeat", n, plural(of, "cron job"))
+		if o.Width > 0 {
+			line = Truncate(line, o.Width)
+		}
+		b.WriteString(s.Yellow(line))
+		b.WriteByte('\n')
+	}
 
 	_, err := io.WriteString(w, b.String())
 	return err
