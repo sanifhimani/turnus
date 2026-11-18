@@ -78,3 +78,22 @@ func TestApkOwned(t *testing.T) {
 		t.Errorf("apkOwned = %v", got)
 	}
 }
+
+// Alpine's root crontab ships lines that run /etc/periodic. They're the OS's,
+// though they sit in a user's crontab.
+func TestMarkBuiltinPeriodic(t *testing.T) {
+	jobs := []job.Job{
+		{File: "/var/spool/cron/crontabs/root", Command: "run-parts /etc/periodic/15min"},
+		{File: "/var/spool/cron/crontabs/root", Command: "run-parts /etc/periodic/daily"},
+		{File: "/var/spool/cron/crontabs/root", Command: "/usr/local/bin/backup"},
+		{File: "/var/spool/cron/crontabs/root", Command: "run-parts /home/me/jobs"},
+		{File: "/etc/cron.d/myapp", Command: "test -x /usr/sbin/anacron || run-parts /etc/cron.daily"},
+	}
+	markBuiltin(jobs, nil)
+	want := []bool{true, true, false, false, true}
+	for i, j := range jobs {
+		if j.Builtin != want[i] {
+			t.Errorf("%q: builtin = %v, want %v", j.Command, j.Builtin, want[i])
+		}
+	}
+}
