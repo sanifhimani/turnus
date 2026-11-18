@@ -88,6 +88,13 @@ turnus runs these checks on every cron, launchd and systemd job.
 | The scheduler skips runs missed while the machine sleeps or is off | macOS | `StartInterval` | Without `Persistent=true` |
 | The job reads `~/Documents`, which cron can't do without Full Disk Access | macOS | | |
 | The job's output goes nowhere | ✓ | | |
+| Nothing would report the job failing: no log, no mail and no heartbeat ping | ✓ | | |
+
+`turnus ls` ends with a count of the cron jobs nothing would report on, such
+as "7 of 12 cron jobs would fail without anyone noticing". A heartbeat
+service such as [Healthchecks](https://healthchecks.io) or
+[Uptime Kuma](https://github.com/louislam/uptime-kuma) alerts you when a job
+stops checking in, which turnus can't do on its own.
 
 turnus runs these checks on the tasks that AI agents schedule.
 
