@@ -245,3 +245,28 @@ func TestWhen(t *testing.T) {
 		}
 	}
 }
+
+func TestHeaderUnmonitored(t *testing.T) {
+	jobs := fixture(2)
+	m := newModel(t, jobs, 120, 20)
+	if out := m.View().Content; strings.Contains(out, "unmonitored") {
+		t.Errorf("no count when no cron job is unmonitored:\n%s", out)
+	}
+
+	jobs[2].Problems = append(jobs[2].Problems, job.Problem{Code: "unmonitored", Severity: job.Info, Summary: "Nothing would tell you"})
+	jobs = append(jobs, job.Job{ID: "logged", Name: "logged", Source: job.Cron, Kind: job.Scheduled,
+		State: job.StateIdle, Schedule: "daily", LogPath: "/var/log/x.log"})
+	m = newModel(t, jobs, 120, 20)
+	header, _, _ := strings.Cut(m.View().Content, "\n")
+	if !strings.Contains(header, "1 of 2 cron jobs unmonitored") {
+		t.Errorf("header = %q", header)
+	}
+
+	// The filter stays visible when the window is too narrow for both.
+	m = newModel(t, jobs, 60, 20)
+	press(m, "/", "z", "z", "enter")
+	header, _, _ = strings.Cut(m.View().Content, "\n")
+	if !strings.Contains(header, "/zz") {
+		t.Errorf("filter should survive a narrow window: %q", header)
+	}
+}
