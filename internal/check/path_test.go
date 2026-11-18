@@ -114,6 +114,21 @@ func TestNotInPath(t *testing.T) {
 	}
 }
 
+// busybox's crond passes on its own PATH, so turnus can't tell what jobs
+// get, even when the crontab sets PATH.
+func TestNotInPathUnknownCron(t *testing.T) {
+	env := pathEnv()
+	env.CronPath = ""
+	for _, j := range []job.Job{
+		{Source: job.Cron, Lookups: []string{"node"}},
+		{Source: job.Cron, Lookups: []string{"node"}, SearchPath: "/usr/bin:/bin"},
+	} {
+		if p := notInPath(&j, env); p != nil {
+			t.Errorf("search path %q: got %q, want no problem", j.SearchPath, p.Summary)
+		}
+	}
+}
+
 // A launchd job whose bare program can't be found exits 78. The PATH problem
 // explains it, so the generic exit 78 message stays quiet.
 func TestNotInPathExplainsExit78(t *testing.T) {
