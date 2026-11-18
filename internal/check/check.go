@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -148,9 +149,17 @@ func booted() time.Time {
 }
 
 // cronPath returns the PATH cron sets for jobs. cronie, the cron of Fedora
-// and Red Hat, adds the sbin folders; Debian's cron and macOS's don't.
+// and Red Hat, adds the sbin folders; Debian's cron and macOS's don't. It
+// returns "" for busybox's crond, used on Alpine, which passes its own PATH
+// on to jobs, so the PATH they get depends on how crond was started.
 func cronPath() string {
-	if runtime.GOOS == "linux" && exists("/usr/sbin/crond") {
+	if runtime.GOOS != "linux" {
+		return "/usr/bin:/bin"
+	}
+	if p, err := filepath.EvalSymlinks("/usr/sbin/crond"); err == nil && filepath.Base(p) == "busybox" {
+		return ""
+	}
+	if exists("/usr/sbin/crond") {
 		return "/usr/bin:/bin:/usr/sbin:/sbin"
 	}
 	return "/usr/bin:/bin"

@@ -25,6 +25,11 @@ func notInPath(j *job.Job, env Env) *job.Problem {
 	var who, path, consequence string
 	switch j.Source {
 	case job.Cron:
+		// Without knowing cron's PATH, as with busybox's crond, any
+		// verdict would be a guess.
+		if env.CronPath == "" {
+			return nil
+		}
 		who, path = "cron", cmp.Or(j.SearchPath, env.CronPath)
 		consequence = `so the job fails with "command not found"`
 	case job.Launchd:
