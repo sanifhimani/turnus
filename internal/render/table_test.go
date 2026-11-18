@@ -187,3 +187,37 @@ func TestLastResult(t *testing.T) {
 		}
 	}
 }
+
+func TestTableUnmonitored(t *testing.T) {
+	unmonitored := []job.Problem{{Code: "unmonitored", Severity: job.Info, Summary: "Nothing would tell you"}}
+	jobs := []job.Job{
+		{Name: "a", Source: job.Cron, Kind: job.Scheduled, State: job.StateIdle, Problems: unmonitored},
+		{Name: "b", Source: job.Cron, Kind: job.Scheduled, State: job.StateIdle, Problems: unmonitored},
+		{Name: "c", Source: job.Cron, Kind: job.Scheduled, State: job.StateIdle, LogPath: "/var/log/c.log"},
+		// Not counted: shipped with the OS, unreadable, or in a periodic folder.
+		{Name: "d", Source: job.Cron, Kind: job.Scheduled, State: job.StateIdle, Builtin: true},
+		{Name: "e", Source: job.Cron, Kind: job.Scheduled, State: job.StateUnknown, Err: "its schedule is invalid"},
+		{Name: "f", Source: job.Cron, Kind: job.Scheduled, State: job.StateIdle, File: "/etc/cron.daily/f"},
+		{Name: "g", Source: job.Launchd, Kind: job.Scheduled, State: job.StateIdle},
+	}
+	if n, of := Unmonitored(jobs); n != 2 || of != 3 {
+		t.Errorf("Unmonitored = %d of %d, want 2 of 3", n, of)
+	}
+
+	out := render(t, jobs, 0)
+	if !strings.Contains(out, "\n2 of 3 cron jobs would fail without anyone noticing: no log, no mail, no heartbeat\n") {
+		t.Errorf("missing the unmonitored line:\n%s", out)
+	}
+	if strings.Contains(out, "Nothing would tell you") {
+		t.Error("the per-job note belongs in the detail view, not the table")
+	}
+	for line := range strings.SplitSeq(strings.TrimRight(render(t, jobs, 60), "\n"), "\n") {
+		if n := utf8.RuneCountInString(line); n > 60 {
+			t.Errorf("line is %d wide, want at most 60: %q", n, line)
+		}
+	}
+
+	if out := render(t, jobs[2:3], 0); strings.Contains(out, "would fail") {
+		t.Errorf("no line when every cron job is monitored:\n%s", out)
+	}
+}

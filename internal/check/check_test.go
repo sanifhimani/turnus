@@ -326,3 +326,35 @@ func TestSkippedByRunParts(t *testing.T) {
 		t.Error("only Debian's run-parts skips dotted names")
 	}
 }
+
+func TestUnmonitored(t *testing.T) {
+	env := testEnv(fakeFS{})
+	env.HasMail = func() bool { return true }
+	tests := []struct {
+		name string
+		job  job.Job
+		want bool
+	}{
+		{"nothing at all", job.Job{Source: job.Cron, Command: "/opt/backup.sh"}, true},
+		{"writes a log", job.Job{Source: job.Cron, Command: "/opt/backup.sh >> /var/log/b.log", LogPath: "/var/log/b.log"}, false},
+		{"pings Healthchecks", job.Job{Source: job.Cron, Command: "/opt/backup.sh && curl -fsS https://hc-ping.com/abc"}, false},
+		{"pings Uptime Kuma", job.Job{Source: job.Cron, Command: "/opt/backup.sh && curl -fsS https://kuma.lan/api/push/xyz"}, false},
+		{"runs under runitor", job.Job{Source: job.Cron, Command: "runitor -uuid abc -- /opt/backup.sh"}, false},
+		{"mails an address", job.Job{Source: job.Cron, Command: "/opt/backup.sh", Env: map[string]string{"MAILTO": "ops@example.com"}}, false},
+		{"mails the local mailbox", job.Job{Source: job.Cron, Command: "/opt/backup.sh", Env: map[string]string{"MAILTO": "root"}}, true},
+		{"periodic script", job.Job{Source: job.Cron, Command: "/etc/cron.daily/b", File: "/etc/cron.daily/b"}, false},
+		{"launchd job", job.Job{Source: job.Launchd, Command: "/opt/backup.sh"}, false},
+	}
+	for _, tt := range tests {
+		if got := unmonitored(&tt.job, env) != nil; got != tt.want {
+			t.Errorf("%s: unmonitored = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+
+	// An address only counts if there's a mail server to send it.
+	env.HasMail = func() bool { return false }
+	j := job.Job{Source: job.Cron, Command: "/opt/backup.sh", Env: map[string]string{"MAILTO": "ops@example.com"}}
+	if unmonitored(&j, env) == nil {
+		t.Error("mail with no mail server should not count")
+	}
+}
