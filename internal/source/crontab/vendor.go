@@ -129,7 +129,8 @@ func dpkgConffiles(r io.Reader) map[string]bool {
 
 // markBuiltin flags jobs that came with the OS. /etc/crontab belongs to the
 // cron package but admins add lines to it, so only its standard run-parts
-// lines count.
+// lines count. Alpine puts the same kind of line, running the folders under
+// /etc/periodic, in root's own crontab.
 func markBuiltin(jobs []job.Job, packaged map[string]bool) {
 	for i := range jobs {
 		j := &jobs[i]
@@ -138,6 +139,23 @@ func markBuiltin(jobs []job.Job, packaged map[string]bool) {
 			j.Builtin = strings.Contains(j.Command, "run-parts")
 		case packaged[j.File]:
 			j.Builtin = true
+		case runsSystemFolder(j.Command):
+			j.Builtin = true
 		}
 	}
+}
+
+// runsSystemFolder reports whether a command runs one of the OS's periodic
+// folders with run-parts, as in "run-parts /etc/periodic/daily".
+func runsSystemFolder(cmd string) bool {
+	if !strings.Contains(cmd, "run-parts") {
+		return false
+	}
+	for _, f := range strings.Fields(cmd) {
+		f = strings.TrimRight(f, ";)}")
+		if strings.HasPrefix(f, "/etc/periodic/") || strings.HasPrefix(f, "/etc/cron.") && f != "/etc/cron.d" {
+			return true
+		}
+	}
+	return false
 }
