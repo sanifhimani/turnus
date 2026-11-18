@@ -378,6 +378,10 @@ func (m *model) header() string {
 	if m.filter != "" && !m.typing {
 		h += "  " + s.Cyan("/"+m.filter)
 	}
+	// Last, so a narrow window cuts this before the filter.
+	if n, of := render.Unmonitored(m.jobs); n > 0 {
+		h += s.Dim(" · ") + s.Yellow(fmt.Sprintf("%d of %d cron jobs unmonitored", n, of))
+	}
 	return h
 }
 
